@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Request microphone access to transcribe audio locally</string>
+  <!-- Embedded into the unbundled dev binary too (tauri embed_plist), so
+       macOS shows "Locution" for the menu-bar item instead of the raw
+       process/executable name. -->
+  <key>CFBundleName</key>
+  <string>Locution</string>
+  <key>CFBundleDisplayName</key>
+  <string>Locution</string>
+</dict>
+</plist>

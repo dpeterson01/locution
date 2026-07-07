@@ -1,0 +1,20 @@
+/* Locution Colors */
+
+:root {
+  --color-text: #0f0f0f;
+  --color-background: #fbfbfb;
+  --color-background-ui: #4338ca;
+  --color-logo-primary: #6366f1;
+  --color-logo-stroke: #312e81;
+  --color-text-stroke: #f6f6f6;
+  --color-mid-gray: #808080;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text: #fbfbfb;
+    --color-background: #2c2b29;
+    --color-logo-primary: #818cf8;
+    --color-logo-stroke: #e0e7ff;
+  }
+}
