@@ -864,21 +864,17 @@ PostProcessingSettingsPrompts.displayName = "PostProcessingSettingsPrompts";
 export const PostProcessingSettings: React.FC = () => {
   const { t } = useTranslation();
 
-  // Rendered inline under Advanced → Experimental when cleanup is enabled
-  // (no sidebar tab of its own). The Ollama setup card is not repeated here —
-  // it lives in the Experimental group directly above this block.
+  // Rendered inline in the Cleanup tab when cleanup is enabled. The Ollama
+  // setup card is not repeated here — it lives in the Cleanup group directly
+  // above this block.
   return (
     <div className="space-y-6">
-      <SettingsGroup title={t("settings.postProcessing.hotkey.title")}>
-        <ShortcutInput
-          shortcutId="transcribe_with_post_process"
-          descriptionMode="tooltip"
-          grouped={true}
-        />
-      </SettingsGroup>
-
       <SettingsGroup title={t("settings.postProcessing.api.title")}>
         <PostProcessingSettingsApi />
+      </SettingsGroup>
+
+      <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
+        <PostProcessingSettingsPrompts />
       </SettingsGroup>
 
       <PostProcessingSettingsAdaptive />
@@ -889,8 +885,12 @@ export const PostProcessingSettings: React.FC = () => {
 
       <PostProcessingSettingsPerApp />
 
-      <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
-        <PostProcessingSettingsPrompts />
+      <SettingsGroup title={t("settings.postProcessing.hotkey.title")}>
+        <ShortcutInput
+          shortcutId="transcribe_with_post_process"
+          descriptionMode="tooltip"
+          grouped={true}
+        />
       </SettingsGroup>
     </div>
   );

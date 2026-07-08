@@ -1,13 +1,13 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Beaker, Cog, FlaskConical, History, Info, Cpu } from "lucide-react";
+import { Cog, FlaskConical, History, Info, Cpu, Sparkles } from "lucide-react";
 import LocutionTextLogo from "./icons/LocutionTextLogo";
 import LocutionMark from "./icons/LocutionMark";
 import { useSettings } from "../hooks/useSettings";
 import {
   GeneralSettings,
   AdvancedSettings,
-  ExperimentalSettings,
+  CleanupSettings,
   HistorySettings,
   DebugSettings,
   AboutSettings,
@@ -44,10 +44,10 @@ export const SECTIONS_CONFIG = {
     component: AdvancedSettings,
     enabled: () => true,
   },
-  experimental: {
-    labelKey: "sidebar.experimental",
-    icon: Beaker,
-    component: ExperimentalSettings,
+  cleanup: {
+    labelKey: "sidebar.postProcessing",
+    icon: Sparkles,
+    component: CleanupSettings,
     enabled: () => true,
   },
   models: {

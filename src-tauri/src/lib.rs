@@ -601,7 +601,6 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_short_model_setting,
             shortcut::change_long_model_setting,
             shortcut::change_skip_llm_under_chars_setting,
-            shortcut::change_experimental_enabled_setting,
             shortcut::change_post_process_base_url_setting,
             shortcut::change_post_process_api_key_setting,
             shortcut::change_post_process_model_setting,

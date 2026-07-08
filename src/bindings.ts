@@ -295,14 +295,6 @@ async changeSkipLlmUnderCharsSetting(value: number) : Promise<Result<null, strin
     else return { status: "error", error: e  as any };
 }
 },
-async changeExperimentalEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_experimental_enabled_setting", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async changePostProcessBaseUrlSetting(providerId: string, baseUrl: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_post_process_base_url_setting", { providerId, baseUrl }) };
@@ -1113,7 +1105,7 @@ default_mode_id?: string | null;
  * current mode (not reset to Clean up) exactly once when upgrading a
  * store that predates this field.
  */
-default_mode_id_seeded?: boolean; adaptive_cleanup?: boolean; short_threshold_chars?: number; short_model?: string; long_model?: string; short_prompt_id?: string | null; long_prompt_id?: string | null; skip_llm_under_chars?: number; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; experimental_enabled?: boolean; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; typing_tool?: TypingTool; external_script_path: string | null; custom_filler_words?: string[] | null; transcribe_accelerator?: TranscribeAcceleratorSetting; ort_accelerator?: OrtAcceleratorSetting; transcribe_gpu_device?: number; extra_recording_buffer_ms?: number; vad_enabled?: boolean; 
+default_mode_id_seeded?: boolean; adaptive_cleanup?: boolean; short_threshold_chars?: number; short_model?: string; long_model?: string; short_prompt_id?: string | null; long_prompt_id?: string | null; skip_llm_under_chars?: number; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; lazy_stream_close?: boolean; keyboard_implementation?: KeyboardImplementation; show_tray_icon?: boolean; paste_delay_ms?: number; typing_tool?: TypingTool; external_script_path: string | null; custom_filler_words?: string[] | null; transcribe_accelerator?: TranscribeAcceleratorSetting; ort_accelerator?: OrtAcceleratorSetting; transcribe_gpu_device?: number; extra_recording_buffer_ms?: number; vad_enabled?: boolean; 
 /**
  * Which recording overlay to show: None / Minimal / Live. Streaming mode is
  * not gated on this — that follows model capability. Migrated from the old
