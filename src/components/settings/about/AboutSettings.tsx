@@ -66,6 +66,9 @@ export const AboutSettings: React.FC = () => {
               </Button>
             )}
           </div>
+          <span className="mt-1 block text-xs text-mid-gray">
+            {t("settings.about.version.author")}
+          </span>
         </SettingContainer>
 
         <ShowWhatsNewOnUpdate descriptionMode="tooltip" grouped={true} />
@@ -97,6 +100,28 @@ export const AboutSettings: React.FC = () => {
         >
           <div className="text-sm text-mid-gray">
             {t("settings.about.acknowledgments.ggml.details")}
+          </div>
+        </SettingContainer>
+
+        <SettingContainer
+          title={t("settings.about.acknowledgments.handy.title")}
+          description={t("settings.about.acknowledgments.handy.description")}
+          grouped={true}
+          layout="stacked"
+        >
+          <div className="text-sm text-mid-gray">
+            {t("settings.about.acknowledgments.handy.details")}
+          </div>
+        </SettingContainer>
+
+        <SettingContainer
+          title={t("settings.about.acknowledgments.whisper.title")}
+          description={t("settings.about.acknowledgments.whisper.description")}
+          grouped={true}
+          layout="stacked"
+        >
+          <div className="text-sm text-mid-gray">
+            {t("settings.about.acknowledgments.whisper.details")}
           </div>
         </SettingContainer>
       </SettingsGroup>

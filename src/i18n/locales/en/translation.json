@@ -682,7 +682,8 @@
         "checking": "Checking…",
         "upToDate": "Up to date",
         "updateAvailable": "Install update",
-        "installing": "Installing…"
+        "installing": "Installing…",
+        "author": "Locution by Derek Peterson"
       },
       "whatsNewUpdates": {
         "label": "Show What's New",
@@ -708,6 +709,16 @@
           "title": "ggml",
           "description": "High-performance tensor library for on-device machine learning inference",
           "details": "Locution's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
+        },
+        "handy": {
+          "title": "Handy",
+          "description": "The open-source dictation app Locution is forked from",
+          "details": "Locution is a fork of Handy by CJ Pais. Thanks for building a local-first dictation app worth building on."
+        },
+        "whisper": {
+          "title": "Whisper",
+          "description": "Open speech recognition models from OpenAI",
+          "details": "Locution's Whisper-family transcription runs on OpenAI's Whisper models, released openly for on-device use."
         }
       }
     }
