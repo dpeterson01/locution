@@ -289,7 +289,95 @@ pub fn frontmost_app_info(app: &AppHandle) -> Option<(String, String)> {
     Some((name?, bundle_id?))
 }
 
-#[cfg(not(target_os = "macos"))]
+/// Windows: frontmost app via Win32. The owning process exe basename (e.g.
+/// `Code.exe`) is the Windows analog of the macOS bundle id and is what the
+/// per-app mode map keys on. These Win32 calls are thread-agnostic
+/// (`GetForegroundWindow` returns the system-wide foreground window), so
+/// unlike the macOS path no main-thread dispatch is needed.
+#[cfg(target_os = "windows")]
+mod windows_impl {
+    use windows::core::PWSTR;
+    use windows::Win32::Foundation::{CloseHandle, HWND};
+    use windows::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
+        PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId,
+    };
+
+    /// Comfortably covers Win32 exe paths (classic MAX_PATH is 260); a longer
+    /// path just yields ERROR_INSUFFICIENT_BUFFER, which we treat as "absent".
+    const PATH_BUF_LEN: usize = 1024;
+
+    /// (window title, process exe basename), both best-effort.
+    pub(super) fn frontmost_app() -> (Option<String>, Option<String>) {
+        unsafe {
+            let hwnd = GetForegroundWindow();
+            if hwnd.0.is_null() {
+                return (None, None);
+            }
+            (window_title(hwnd), process_exe_basename(hwnd))
+        }
+    }
+
+    unsafe fn window_title(hwnd: HWND) -> Option<String> {
+        let len = GetWindowTextLengthW(hwnd);
+        if len <= 0 {
+            return None;
+        }
+        // +1 for the null terminator GetWindowTextW writes.
+        let mut buf = vec![0u16; len as usize + 1];
+        let copied = GetWindowTextW(hwnd, &mut buf);
+        if copied <= 0 {
+            return None;
+        }
+        let title = String::from_utf16_lossy(&buf[..copied as usize]);
+        let title = title.trim();
+        (!title.is_empty()).then(|| title.to_string())
+    }
+
+    unsafe fn process_exe_basename(hwnd: HWND) -> Option<String> {
+        let mut pid: u32 = 0;
+        GetWindowThreadProcessId(hwnd, Some(&mut pid as *mut u32));
+        if pid == 0 {
+            return None;
+        }
+        // PROCESS_QUERY_LIMITED_INFORMATION needs no elevation for most apps.
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
+
+        let mut buf = vec![0u16; PATH_BUF_LEN];
+        let mut size = buf.len() as u32;
+        let query =
+            QueryFullProcessImageNameW(handle, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &mut size);
+        let _ = CloseHandle(handle);
+
+        query.ok()?;
+        if size == 0 {
+            return None;
+        }
+        let full_path = String::from_utf16_lossy(&buf[..size as usize]);
+        // Basename after the last path separator; the exe name is the map key.
+        let base = full_path
+            .rsplit(|c| c == '\\' || c == '/')
+            .next()
+            .unwrap_or(&full_path)
+            .trim();
+        (!base.is_empty()).then(|| base.to_string())
+    }
+}
+
+#[cfg(target_os = "windows")]
+pub fn frontmost_app_info(_app: &AppHandle) -> Option<(String, String)> {
+    let (name, bundle_id) = windows_impl::frontmost_app();
+    let bundle_id = bundle_id?;
+    // The exe name is the essential map key; fall back to it for the display
+    // name so per-app auto-mode still works on title-less windows.
+    let name = name.unwrap_or_else(|| bundle_id.clone());
+    Some((name, bundle_id))
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn frontmost_app_info(_app: &AppHandle) -> Option<(String, String)> {
     None
 }

@@ -24,7 +24,7 @@ The process is entirely local:
 - Transcription uses your choice of models:
   - **Whisper models** (Small/Medium/Turbo/Large) with GPU acceleration when available
   - **Parakeet V3** - CPU-optimized model with excellent performance and automatic language detection
-- Runs on macOS
+- Runs on macOS and Windows (Windows support is in active testing)
 
 ## Quick Start
 
@@ -44,6 +44,17 @@ The process is entirely local:
    Keep Ollama running (`ollama serve`). The speech-to-text model downloads on first launch.
 5. Launch **Locution** and grant Microphone and Accessibility permissions when prompted.
 6. Set your push-to-talk hotkey in Settings, then start dictating.
+
+### Windows (in testing)
+
+Windows support is being validated. To try a Windows build:
+
+1. Download the `.msi` or NSIS `.exe` installer from the [releases page](https://github.com/dpeterson01/locution/releases), or from a Main Branch Build run under the **Actions** tab.
+2. The build is unsigned, so Windows SmartScreen warns on first launch. Click **More info**, then **Run anyway**.
+3. Install [Ollama](https://ollama.com), pull the same two models listed above, and keep it running.
+4. Launch Locution, grant the microphone prompt, and use the default **Ctrl+Space** push-to-talk hotkey (change it in Settings).
+
+Per-app auto-mode keys on the process name on Windows (for example `Code.exe`). Screen-context ("Context") capture is macOS-only for now.
 
 ### Development Setup
 
