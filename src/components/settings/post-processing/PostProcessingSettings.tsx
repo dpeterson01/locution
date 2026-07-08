@@ -100,7 +100,7 @@ const PostProcessingSettingsApiComponent: React.FC = () => {
         </>
       )}
 
-      {!state.isAppleProvider && (
+      {!state.isAppleProvider && !state.isCustomProvider && (
         <SettingContainer
           title={t("settings.postProcessing.api.model.title")}
           description={
@@ -589,14 +589,19 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
               >
                 {t("settings.postProcessing.prompts.updatePrompt")}
               </Button>
-              <Button
-                onClick={() => handleDeletePrompt(selectedPromptId)}
-                variant="secondary"
-                size="md"
-                disabled={!selectedPromptId || prompts.length <= 1}
-              >
-                {t("settings.postProcessing.prompts.deletePrompt")}
-              </Button>
+              {selectedPromptId &&
+                !["mode_short_dictation", "mode_long_dictation"].includes(
+                  selectedPromptId,
+                ) && (
+                  <Button
+                    onClick={() => handleDeletePrompt(selectedPromptId)}
+                    variant="secondary"
+                    size="md"
+                    disabled={prompts.length <= 1}
+                  >
+                    {t("settings.postProcessing.prompts.deletePrompt")}
+                  </Button>
+                )}
             </div>
           </div>
         )}
@@ -682,8 +687,7 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
   const state = usePostProcessProviderState();
   const { getSetting, updateSetting, isUpdating } = useSettings();
 
-  const adaptiveCleanup = getSetting("adaptive_cleanup") ?? true;
-  const shortThresholdChars = getSetting("short_threshold_chars") ?? 220;
+  const shortThresholdChars = getSetting("short_threshold_chars") ?? 150;
   const shortModel = getSetting("short_model") ?? "";
   const longModel = getSetting("long_model") ?? "";
   const skipLlmUnderChars = getSetting("skip_llm_under_chars") ?? 0;
@@ -722,15 +726,6 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
 
   return (
     <SettingsGroup title={t("settings.postProcessing.adaptive.title")}>
-      <ToggleSwitch
-        checked={adaptiveCleanup}
-        onChange={(enabled) => updateSetting("adaptive_cleanup", enabled)}
-        isUpdating={isUpdating("adaptive_cleanup")}
-        label={t("settings.postProcessing.adaptive.toggle.title")}
-        description={t("settings.postProcessing.adaptive.toggle.description")}
-        descriptionMode="tooltip"
-        grouped={true}
-      />
       <SettingContainer
         title={t("settings.postProcessing.adaptive.threshold.title")}
         description={t(
@@ -739,14 +734,13 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
         descriptionMode="tooltip"
         layout="horizontal"
         grouped={true}
-        disabled={!adaptiveCleanup}
       >
         <Input
           type="number"
           min="0"
           value={shortThresholdChars}
           onChange={handleNumberChange("short_threshold_chars")}
-          disabled={!adaptiveCleanup || isUpdating("short_threshold_chars")}
+          disabled={isUpdating("short_threshold_chars")}
           className="w-24"
         />
       </SettingContainer>
@@ -758,13 +752,12 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
         descriptionMode="tooltip"
         layout="stacked"
         grouped={true}
-        disabled={!adaptiveCleanup}
       >
         <div className="flex items-center gap-2">
           <ModelSelect
             value={shortModel}
             options={tierModelOptions}
-            disabled={!adaptiveCleanup || isUpdating("short_model")}
+            disabled={isUpdating("short_model")}
             isLoading={state.isFetchingModels}
             placeholder={modelPlaceholder}
             onSelect={(value) => updateSetting("short_model", value)}
@@ -782,13 +775,12 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
         descriptionMode="tooltip"
         layout="stacked"
         grouped={true}
-        disabled={!adaptiveCleanup}
       >
         <div className="flex items-center gap-2">
           <ModelSelect
             value={longModel}
             options={tierModelOptions}
-            disabled={!adaptiveCleanup || isUpdating("long_model")}
+            disabled={isUpdating("long_model")}
             isLoading={state.isFetchingModels}
             placeholder={modelPlaceholder}
             onSelect={(value) => updateSetting("long_model", value)}
@@ -814,14 +806,13 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
         descriptionMode="tooltip"
         layout="horizontal"
         grouped={true}
-        disabled={!adaptiveCleanup}
       >
         <Input
           type="number"
           min="0"
           value={skipLlmUnderChars}
           onChange={handleNumberChange("skip_llm_under_chars")}
-          disabled={!adaptiveCleanup || isUpdating("skip_llm_under_chars")}
+          disabled={isUpdating("skip_llm_under_chars")}
           className="w-24"
         />
       </SettingContainer>

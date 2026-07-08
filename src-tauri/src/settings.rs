@@ -658,15 +658,15 @@ fn default_overlay_always_show() -> bool {
 }
 
 fn default_short_threshold_chars() -> u32 {
-    220
+    150
 }
 
 fn default_short_model() -> String {
-    "llama3.2:3b".to_string()
+    "phi4-mini:latest".to_string()
 }
 
 fn default_long_model() -> String {
-    "llama3.1:8b".to_string()
+    "gemma3:12b".to_string()
 }
 
 fn default_app_language() -> String {
@@ -735,22 +735,6 @@ fn default_post_process_providers() -> Vec<PostProcessProvider> {
         },
     ];
 
-    // Note: We always include Apple Intelligence on macOS ARM64 without checking availability
-    // at startup. The availability check is deferred to when the user actually tries to use it
-    // (in actions.rs). This prevents crashes on macOS 26.x beta where accessing
-    // SystemLanguageModel.default during early app initialization causes SIGABRT.
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    {
-        providers.push(PostProcessProvider {
-            id: APPLE_INTELLIGENCE_PROVIDER_ID.to_string(),
-            label: "Apple Intelligence".to_string(),
-            base_url: "apple-intelligence://local".to_string(),
-            allow_base_url_edit: false,
-            models_endpoint: None,
-            supports_structured_output: true,
-        });
-    }
-
     // AWS Bedrock via Mantle (OpenAI-compatible endpoint)
     providers.push(PostProcessProvider {
         id: "bedrock_mantle".to_string(),
@@ -805,72 +789,58 @@ fn default_post_process_models() -> HashMap<String, String> {
 pub(crate) const LEGACY_DEFAULT_PROMPT_ID: &str = "default_improve_transcriptions";
 pub(crate) const LEGACY_DEFAULT_PROMPT_TEXT: &str = "Clean this transcript:\n1. Fix spelling, capitalization, and punctuation errors\n2. Convert number words to digits (twenty-five → 25, ten percent → 10%, five dollars → $5)\n3. Replace spoken punctuation with symbols (period → ., comma → ,, question mark → ?)\n4. Remove filler words (um, uh, like as filler)\n5. Keep the language in the original version (if it was french, keep it in french for example)\n\nPreserve exact meaning and word order. Do not paraphrase or reorder content.\n\nReturn only the cleaned transcript.\n\nTranscript:\n${output}";
 
-pub(crate) const DEFAULT_MODE_ID: &str = "mode_light_edit";
+pub(crate) const DEFAULT_MODE_ID: &str = "mode_short_dictation";
 
-/// Each mode is a complete goal recipe — edit-strength + tone + format +
-/// model tier bundled into one prompt, rather than a bare edit-strength
-/// level layered with a separate tone Style. Formal/Casual/Concise tone
-/// intent that used to live in the (now-removed) Style presets is folded
-/// directly into Email (formal), Message (casual), and Note (concise).
+/// The adaptive tier modes back the length-based default cleanup (short input
+/// -> Short Dictation, long input -> Long Dictation). They are protected:
+/// editable but never deletable, since the default path depends on them.
+pub(crate) const SHORT_DICTATION_MODE_ID: &str = "mode_short_dictation";
+pub(crate) const LONG_DICTATION_MODE_ID: &str = "mode_long_dictation";
+pub(crate) const PROTECTED_MODE_IDS: [&str; 2] =
+    [SHORT_DICTATION_MODE_ID, LONG_DICTATION_MODE_ID];
+
+/// Default modes. The first two (Short/Long Dictation) are the adaptive tiers
+/// used by length when no per-app rule matches. The rest are per-app category
+/// modes a user maps applications to; a matching per-app rule overrides the
+/// length tier regardless of dictation length.
 fn default_post_process_prompts() -> Vec<LLMPrompt> {
     vec![
         LLMPrompt {
-            id: DEFAULT_MODE_ID.to_string(),
-            name: "Clean up".to_string(),
-            prompt: "Lightly clean this transcript: fix capitalization, punctuation, and obvious formatting, and remove filler words (um, uh, er, like as filler). Do not rephrase, reorder, or change wording. Return only the cleaned text.\n\n${output}".to_string(),
-            model: Some("llama3.2:3b".to_string()),
+            id: SHORT_DICTATION_MODE_ID.to_string(),
+            name: "Short Dictation".to_string(),
+            prompt: "You are a precision text cleaner. Fix speech-to-text artifacts and grammatical errors while preserving the user's exact phrasing and voice.\n\nRULES:\n1. Fix obvious spelling mistakes, typos, missing punctuation, and capitalization errors.\n2. Delete spoken filler words (e.g., \"um\", \"uh\", \"like\", \"you know\") and accidental word repetitions.\n3. Keep all original vocabulary, slang, or jargon. Do NOT paraphrase or smooth out the style.\n4. Keep the output as a single, continuous line. Do NOT introduce line breaks, lists, or paragraph transitions.\n5. Output ONLY the finalized text. Absolutely no chat or explanations.\n\nInput text to clean:\n\n${output}".to_string(),
+            model: None,
             use_context: false,
         },
         LLMPrompt {
-            id: "mode_rewrite".to_string(),
-            name: "Rewrite".to_string(),
-            prompt: "Rewrite this transcript into clear, well-structured text: fix grammar, remove redundancy and false starts, tighten wording, and improve flow while preserving my meaning and intent. Return only the rewritten text.\n\n${output}".to_string(),
-            model: Some("llama3.1:8b".to_string()),
+            id: LONG_DICTATION_MODE_ID.to_string(),
+            name: "Long Dictation".to_string(),
+            prompt: "You are a precision text cleaner. Fix speech-to-text artifacts and grammatical errors while preserving the user's exact phrasing and voice.\n\nRULES:\n1. Fix obvious spelling mistakes, typos, missing punctuation, and capitalization errors.\n2. Delete spoken filler words (e.g., \"um\", \"uh\", \"like\", \"you know\") and accidental word repetitions.\n3. Keep all original vocabulary, slang, or jargon. Do NOT rewrite sentences to sound like an AI.\n4. Organize the text into logical paragraphs to ensure readability. Break up long, continuous walls of text into distinct thoughts.\n5. Output ONLY the finalized text. Absolutely no chat or explanations.\n\nInput text to clean:\n\n${output}".to_string(),
+            model: None,
             use_context: false,
         },
         LLMPrompt {
-            id: "mode_email".to_string(),
-            name: "Email".to_string(),
-            prompt: "Rewrite this transcript as a clear, polite email body in a formal, professional register: complete sentences, no slang or abbreviations. Fix grammar, remove filler words and false starts, and organize it into short paragraphs while preserving my meaning. Do not invent a subject line, greeting, or sign-off I did not dictate. Return only the email text.\n\n${output}".to_string(),
-            model: Some("llama3.1:8b".to_string()),
+            id: "mode_communication".to_string(),
+            name: "Communication Apps".to_string(),
+            prompt: "You are an expert communication editor. Your sole task is to clean up raw dictation into clear, professional, and natural-sounding messaging.\n\nCRITICAL CONSTRAINTS:\n1. Fix all grammar, spelling, typos, and syntax errors.\n2. Remove filler words (um, uh, like, you know) and accidental speech repetitions.\n3. Organize the text into logical, readable paragraphs if it is long.\n4. Maintain a natural human tone. Avoid robotic or overly formal \"AI cliches\" (do NOT start with \"I hope this email finds you well\" or use words like \"delve\", \"testament\", or \"revolutionize\").\n5. If the input implies an email or message structure, ensure clear transitions but do not invent fake names or signatures.\n6. Output ONLY the finalized message. Never include introductory text, explanations, or wrap-up commentary.\n\nInput text to clean:\n\n${output}".to_string(),
+            model: None,
             use_context: false,
         },
         LLMPrompt {
-            id: "mode_message".to_string(),
-            name: "Message".to_string(),
-            prompt: "Clean this transcript into a casual, conversational chat message, like texting a friend or colleague: fix capitalization and punctuation, remove filler words and false starts, and keep it brief without changing my wording more than needed. Return only the message text.\n\n${output}".to_string(),
-            model: Some("llama3.2:3b".to_string()),
+            id: "mode_notes_apps".to_string(),
+            name: "Notes Apps".to_string(),
+            prompt: "You are a structural organization engine. Your task is to process unorganized dictation thoughts and map them into clear, scannable Markdown documentation.\n\nCRITICAL CONSTRAINTS:\n1. Fix all underlying spelling and grammatical errors.\n2. Categorize loose thoughts logically using clean Markdown formatting.\n3. Use bold headers (## or ###) for primary themes or distinct topics mentioned.\n4. Convert itemized thoughts or descriptions into clean bullet points.\n5. If actionable items or tasks are detected in the speech, extract them into a dedicated section titled \"### Action Items\" at the bottom.\n6. Preserve the exact vocabulary and technical context used by the speaker—do not summarize away critical details.\n7. Output ONLY the formatted markdown document. Do not include chat greetings, system commentary, or explanations.\n\nInput text to clean:\n\n${output}".to_string(),
+            model: None,
             use_context: false,
         },
         LLMPrompt {
-            id: "mode_notes".to_string(),
-            name: "Note".to_string(),
-            prompt: "Convert this transcript into concise, terse bulleted notes: group related points, use short phrases, trim pleasantries and hedging, keep every fact, name, and number, and remove filler words. Return only the bullet list.\n\n${output}".to_string(),
-            model: Some("llama3.1:8b".to_string()),
+            id: "mode_technical_apps".to_string(),
+            name: "Technical Apps".to_string(),
+            prompt: "You are a precision technical text corrector. Your task is to apply surgical grammatical edits to technical notes, code-adjacent descriptions, or issue tickets.\n\nCRITICAL CONSTRAINTS:\n1. Fix spelling, immediate punctuation errors, and clear typos only.\n2. Do NOT smooth out the tone, do NOT paraphrase, and do NOT rewrite sentences to sound more elegant or professional. Preserve the exact phrasing and colloquial style.\n3. Strictly preserve all code snippets, variable names (e.g., camelCase, snake_case), database keys, URL paths, bracket types, and technical symbols exactly as written or implied.\n4. Do not insert formatting elements, paragraphs, or lists unless explicitly requested in the spoken text.\n5. Never add polite phrases, introductory filler, or concluding remarks.\n6. Output ONLY the strictly corrected raw text.\n\nInput text to clean:\n\n${output}".to_string(),
+            model: Some("phi4-mini:latest".to_string()),
             use_context: false,
         },
-        LLMPrompt {
-            id: "mode_verbatim".to_string(),
-            name: "Verbatim".to_string(),
-            prompt: "Correct only spelling and punctuation in this transcript. Do not remove or change any words, do not remove filler words, and do not rephrase anything. Return only the corrected transcript.\n\n${output}".to_string(),
-            model: Some("llama3.2:3b".to_string()),
-            use_context: false,
-        },
-        context_mode(),
     ]
-}
-
-/// The seeded Context mode (Phase 7): feeds captured screen context into the
-/// cleanup prompt. Factored out so `ensure_post_process_defaults` can seed it
-/// into stores that already ran the Phase 5 seeding pass.
-fn context_mode() -> LLMPrompt {
-    LLMPrompt {
-        id: "mode_context".to_string(),
-        name: "Context".to_string(),
-        prompt: "Using the provided context, clean and format this dictation so it fits the situation: match the register and terminology on screen, fix grammar and punctuation, and remove filler words. Preserve my meaning and intent. Return only the cleaned text.\n\n${output}".to_string(),
-        model: Some("llama3.1:8b".to_string()),
-        use_context: true,
-    }
 }
 
 fn default_style_card() -> String {
@@ -985,18 +955,70 @@ fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
         changed = true;
     }
 
-    // Seed the Context mode (Phase 7) once into stores that already ran the
-    // Phase 5 pass above. The id guard prevents a double-add when a very old
-    // store runs both seeding blocks in the same load.
-    if !settings.context_mode_seeded {
-        if !settings
-            .post_process_prompts
-            .iter()
-            .any(|p| p.id == "mode_context")
-        {
-            settings.post_process_prompts.push(context_mode());
+    // Mode redesign migration: retire the pre-redesign default modes and
+    // guarantee the protected adaptive tier modes exist. Idempotent, so it can
+    // safely run on every load; the per-app category modes are seeded once via
+    // the modes_seeded block above so a user deletion sticks.
+    const RETIRED_MODE_IDS: [&str; 7] = [
+        "mode_light_edit",
+        "mode_rewrite",
+        "mode_email",
+        "mode_message",
+        "mode_notes",
+        "mode_verbatim",
+        "mode_context",
+    ];
+    let before_len = settings.post_process_prompts.len();
+    settings
+        .post_process_prompts
+        .retain(|p| !RETIRED_MODE_IDS.contains(&p.id.as_str()));
+    for mode in default_post_process_prompts() {
+        let protected = PROTECTED_MODE_IDS.contains(&mode.id.as_str());
+        let present = settings.post_process_prompts.iter().any(|p| p.id == mode.id);
+        if protected && !present {
+            settings.post_process_prompts.push(mode);
         }
-        settings.context_mode_seeded = true;
+    }
+    if settings
+        .post_process_selected_prompt_id
+        .as_deref()
+        .map_or(true, |id| RETIRED_MODE_IDS.contains(&id))
+    {
+        settings.post_process_selected_prompt_id = Some(DEFAULT_MODE_ID.to_string());
+    }
+    if settings
+        .default_mode_id
+        .as_deref()
+        .map_or(false, |id| RETIRED_MODE_IDS.contains(&id))
+    {
+        settings.default_mode_id = Some(DEFAULT_MODE_ID.to_string());
+    }
+    if settings
+        .short_prompt_id
+        .as_deref()
+        .map_or(true, |id| RETIRED_MODE_IDS.contains(&id))
+    {
+        settings.short_prompt_id = Some(SHORT_DICTATION_MODE_ID.to_string());
+    }
+    if settings
+        .long_prompt_id
+        .as_deref()
+        .map_or(true, |id| RETIRED_MODE_IDS.contains(&id))
+    {
+        settings.long_prompt_id = Some(LONG_DICTATION_MODE_ID.to_string());
+    }
+    if settings.post_process_prompts.len() != before_len {
+        changed = true;
+    }
+
+    // Enforce non-empty adaptive tier models: they are the model selection for
+    // the local provider, so an empty one would leave cleanup model-less.
+    if settings.short_model.trim().is_empty() {
+        settings.short_model = default_short_model();
+        changed = true;
+    }
+    if settings.long_model.trim().is_empty() {
+        settings.long_model = default_long_model();
         changed = true;
     }
 
@@ -1116,8 +1138,8 @@ pub fn get_default_settings() -> AppSettings {
         short_threshold_chars: default_short_threshold_chars(),
         short_model: default_short_model(),
         long_model: default_long_model(),
-        short_prompt_id: None,
-        long_prompt_id: None,
+        short_prompt_id: Some(SHORT_DICTATION_MODE_ID.to_string()),
+        long_prompt_id: Some(LONG_DICTATION_MODE_ID.to_string()),
         skip_llm_under_chars: 0,
         mute_while_recording: false,
         append_trailing_space: false,

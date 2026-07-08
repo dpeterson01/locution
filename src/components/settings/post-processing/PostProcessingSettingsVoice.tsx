@@ -64,7 +64,8 @@ const PostProcessingSettingsVoiceComponent: React.FC = () => {
         grouped={true}
       />
 
-      <div className="space-y-2 flex flex-col p-4">
+      {styleCardEnabled && (
+        <div className="settings-expand-in space-y-2 flex flex-col p-4">
         <label className="text-sm font-semibold">
           {t("settings.postProcessing.voice.card.textLabel")}
         </label>
@@ -113,6 +114,7 @@ const PostProcessingSettingsVoiceComponent: React.FC = () => {
           </Button>
         </div>
       </div>
+      )}
     </SettingsGroup>
   );
 };

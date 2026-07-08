@@ -181,9 +181,9 @@ fn build_style_guidance_block(settings: &AppSettings) -> Option<String> {
 /// the local "custom"/Ollama one — `short_model`/`long_model` are Ollama model
 /// names, so other providers keep their single configured model).
 fn adaptive_tier(settings: &AppSettings, transcription: &str) -> Option<CleanupTier> {
-    if !settings.adaptive_cleanup {
-        return None;
-    }
+    // Adaptive length tiering is always on for the local "custom" provider
+    // (short_model/long_model are Ollama model names). Other providers keep
+    // their single configured model, so they never tier.
     if settings
         .active_post_process_provider()
         .map(|p| p.id.as_str())
@@ -253,27 +253,45 @@ async fn post_process_transcription(
     };
     let mut prompt = selected_mode.prompt.clone();
 
-    // The selected mode's model is the baseline; the provider's configured
-    // model covers modes without one.
+    // Model selection: the mode's pinned model wins. Otherwise fall back to
+    // the length tier (short input -> short_model, long input -> long_model);
+    // the provider's primary model is the last resort for non-tiered (hosted)
+    // providers.
     let mode_model = selected_mode
         .model
         .as_ref()
         .filter(|m| !m.trim().is_empty());
-    let mut model = mode_model.cloned().unwrap_or_else(|| {
-        settings
-            .post_process_models
-            .get(&provider.id)
-            .cloned()
-            .unwrap_or_default()
+    let tier_fallback_model = match tier {
+        Some(CleanupTier::Short) => Some(settings.short_model.trim().to_string()),
+        Some(CleanupTier::Long) => Some(settings.long_model.trim().to_string()),
+        _ => None,
+    }
+    .filter(|m| !m.is_empty());
+    let model = mode_model.cloned().unwrap_or_else(|| {
+        tier_fallback_model.unwrap_or_else(|| {
+            settings
+                .post_process_models
+                .get(&provider.id)
+                .cloned()
+                .unwrap_or_default()
+        })
     });
 
-    // A tier-specific prompt id (unset by default) overrides the selected
-    // prompt; an unknown id falls back to it.
+    // The length tier swaps the prompt ONLY when the active mode is one of the
+    // protected Dictation tiers — the default length-based path. A per-app
+    // category mode overrides short/long regardless of length, so it is used
+    // verbatim (no tier prompt swap).
     let mut effective_use_context = selected_mode.use_context;
-    let tier_prompt_id = match tier {
-        Some(CleanupTier::Short) => settings.short_prompt_id.as_ref(),
-        Some(CleanupTier::Long) => settings.long_prompt_id.as_ref(),
-        _ => None,
+    let active_is_tier_mode =
+        crate::settings::PROTECTED_MODE_IDS.contains(&selected_prompt_id.as_str());
+    let tier_prompt_id = if active_is_tier_mode {
+        match tier {
+            Some(CleanupTier::Short) => settings.short_prompt_id.as_ref(),
+            Some(CleanupTier::Long) => settings.long_prompt_id.as_ref(),
+            _ => None,
+        }
+    } else {
+        None
     };
     if let Some(id) = tier_prompt_id {
         if let Some(tier_prompt) = settings.post_process_prompts.iter().find(|p| &p.id == id) {
@@ -287,27 +305,6 @@ async fn post_process_transcription(
         && settings.context_capture_enabled
         && provider.id == "custom"
         && context.is_some_and(|c| !c.is_empty());
-
-    // Adaptive routing scales speed/quality within the mode: short input drops
-    // to the fast model; long input escalates to the thorough model only when
-    // the mode doesn't pin its own (so Light Edit stays fast, Rewrite stays 8B).
-    //
-    // Invariant: the context path honors the mode's pinned model — context
-    // runs are opt-in and deliberately better-over-faster. Fast-tier models
-    // (llama3.2:3b class) can't adopt injected context: they echo preambles
-    // ("Here is the cleaned…") or clean the context instead of the dictation
-    // (measured 0/5 clean vs 8/8 on llama3.1:8b).
-    match tier {
-        Some(CleanupTier::Short) if !context_active && !settings.short_model.trim().is_empty() => {
-            model = settings.short_model.clone();
-        }
-        Some(CleanupTier::Long)
-            if mode_model.is_none() && !settings.long_model.trim().is_empty() =>
-        {
-            model = settings.long_model.clone();
-        }
-        _ => {}
-    }
 
     if model.trim().is_empty() {
         debug!(

@@ -142,8 +142,8 @@
         "other": "Something went wrong setting up Ollama."
       },
       "model": {
-        "short": "Fast model (llama3.2:3b)",
-        "long": "Thorough model (llama3.1:8b)",
+        "short": "Fast model",
+        "long": "Thorough model",
         "present": "Already installed",
         "skipped": "Skipped",
         "interrupted": "Download was interrupted.",

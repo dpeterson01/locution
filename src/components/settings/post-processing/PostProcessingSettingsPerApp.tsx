@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { commands } from "@/bindings";
 import { Dropdown, SettingsGroup, ToggleSwitch } from "@/components/ui";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
@@ -17,31 +15,11 @@ const PostProcessingSettingsPerAppComponent: React.FC = () => {
 
   const [bundleId, setBundleId] = useState("");
   const [modeId, setModeId] = useState<string | null>(prompts[0]?.id ?? null);
-  const [isDetecting, setIsDetecting] = useState(false);
 
   const modeOptions = prompts.map((p) => ({ value: p.id, label: p.name }));
 
   const modeName = (id: string | undefined) =>
     prompts.find((p) => p.id === id)?.name ?? id ?? "";
-
-  const handleDetect = async () => {
-    setIsDetecting(true);
-    try {
-      const result = await commands.getFrontmostApp();
-      if (result.status === "ok" && result.data) {
-        setBundleId(result.data.bundle_id);
-        toast.success(
-          t("settings.postProcessing.perApp.rules.detected", {
-            name: result.data.name,
-          }),
-        );
-      } else {
-        toast.error(t("settings.postProcessing.perApp.rules.detectFailed"));
-      }
-    } finally {
-      setIsDetecting(false);
-    }
-  };
 
   const handleAddRule = () => {
     const trimmed = bundleId.trim();
@@ -81,15 +59,6 @@ const PostProcessingSettingsPerAppComponent: React.FC = () => {
               variant="compact"
               className="flex-1 min-w-0"
             />
-            <Button
-              onClick={handleDetect}
-              variant="secondary"
-              size="md"
-              disabled={isDetecting}
-              className="shrink-0"
-            >
-              {t("settings.postProcessing.perApp.rules.detectButton")}
-            </Button>
           </div>
 
           <div className="flex items-center gap-2">

@@ -1207,6 +1207,12 @@ pub fn update_post_process_prompt(
 pub fn delete_post_process_prompt(app: AppHandle, id: String) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
 
+    // The adaptive tier modes (Short/Long Dictation) back the default
+    // length-based cleanup and are editable but never deletable.
+    if settings::PROTECTED_MODE_IDS.contains(&id.as_str()) {
+        return Err("This mode is required and cannot be deleted".to_string());
+    }
+
     // Don't allow deleting the last prompt
     if settings.post_process_prompts.len() <= 1 {
         return Err("Cannot delete the last prompt".to_string());
@@ -1400,7 +1406,7 @@ pub async fn distill_style_card(app: AppHandle, samples: Vec<String>) -> Result<
         .cloned()
         .ok_or_else(|| "Local provider is not configured".to_string())?;
     let model = if settings.long_model.trim().is_empty() {
-        "llama3.1:8b".to_string()
+        "gemma3:12b".to_string()
     } else {
         settings.long_model.clone()
     };

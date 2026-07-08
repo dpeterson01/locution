@@ -18,8 +18,8 @@ interface OllamaOnboardingProps {
 }
 
 // Keep in sync with src-tauri/src/ollama_setup.rs SHORT_TIER_MODEL/LONG_TIER_MODEL.
-const SHORT_TIER_MODEL = "llama3.2:3b";
-const LONG_TIER_MODEL = "llama3.1:8b";
+const SHORT_TIER_MODEL = "phi4-mini:latest";
+const LONG_TIER_MODEL = "gemma3:12b";
 const TIER_MODELS = [SHORT_TIER_MODEL, LONG_TIER_MODEL];
 
 type OverallPhase =
