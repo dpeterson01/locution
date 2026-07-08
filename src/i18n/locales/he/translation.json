@@ -294,19 +294,6 @@
         "label": "השאר את המיקרופון פתוח בין תמלולים",
         "description": "משאיר את זרם המיקרופון פתוח למשך 30 שניות אחרי סיום ההקלטה, וכך מפחית השהיה בתמלולים רצופים. עשוי לפגוע באיכות שמע Bluetooth בזמן שהאפשרות פעילה."
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "האצת Whisper",
-          "description": "האצת חומרה למודלי Whisper. מצב אוטומטי משתמש ב-GPU אם זמין (Metal ב-macOS, Vulkan ב-Windows/Linux)."
-        },
-        "ort": {
-          "title": "האצת ONNX",
-          "description": "האצת חומרה למודלי ONNX (Parakeet, Canary, Moonshine ועוד). DirectML ב-Windows הוא ניסיוני. ייתכן שמודלים ייכשלו בתמלול."
-        },
-        "gpuDevice": {
-          "auto": "אוטומטי"
-        }
-      },
       "startHidden": {
         "label": "התחל מוסתר",
         "description": "הפעל לתוך מגש המערכת בלי לפתוח את החלון."

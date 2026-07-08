@@ -294,19 +294,6 @@
         "label": "Mikrofon zwischen Transkriptionen offen halten",
         "description": "Hält den Mikrofon-Stream nach dem Aufnahmestopp 30 Sekunden lang offen, um die Latenz bei aufeinanderfolgenden Transkriptionen zu verringern. Kann die Bluetooth-Audioqualität beeinträchtigen."
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "Whisper-Beschleunigung",
-          "description": "Hardwarebeschleunigung für Whisper-Modelle. Automatisch nutzt GPU falls verfügbar (Metal auf macOS, Vulkan auf Windows/Linux)."
-        },
-        "ort": {
-          "title": "ONNX-Beschleunigung",
-          "description": "Hardwarebeschleunigung für ONNX-Modelle (Parakeet, Canary, Moonshine usw.). DirectML unter Windows ist experimentell. Modelle können bei der Transkription fehlschlagen."
-        },
-        "gpuDevice": {
-          "auto": "Auto"
-        }
-      },
       "startHidden": {
         "label": "Versteckt starten",
         "description": "In den Systembereich starten, ohne das Fenster zu öffnen."

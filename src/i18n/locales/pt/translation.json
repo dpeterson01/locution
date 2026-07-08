@@ -294,19 +294,6 @@
         "label": "Manter microfone aberto entre transcrições",
         "description": "Mantém o fluxo do microfone aberto por 30 segundos após parar a gravação, reduzindo a latência em transcrições consecutivas. Pode degradar a qualidade do áudio Bluetooth enquanto ativo."
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "Aceleração Whisper",
-          "description": "Aceleração por hardware para modelos Whisper. Auto usa GPU se disponível (Metal no macOS, Vulkan no Windows/Linux)."
-        },
-        "ort": {
-          "title": "Aceleração ONNX",
-          "description": "Aceleração por hardware para modelos ONNX (Parakeet, Canary, Moonshine, etc.). DirectML no Windows é experimental. Os modelos podem falhar na transcrição."
-        },
-        "gpuDevice": {
-          "auto": "Auto"
-        }
-      },
       "startHidden": {
         "label": "Iniciar Oculto",
         "description": "Iniciar na bandeja do sistema sem abrir a janela."

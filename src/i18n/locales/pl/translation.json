@@ -294,19 +294,6 @@
         "label": "Pozostaw mikrofon otwarty między transkrypcjami",
         "description": "Utrzymuje strumień mikrofonu otwarty przez 30 sekund po zatrzymaniu nagrywania, zmniejszając opóźnienie przy kolejnych transkrypcjach. Może pogorszyć jakość dźwięku Bluetooth."
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "Akceleracja Whisper",
-          "description": "Akceleracja sprzętowa dla modeli Whisper. Tryb automatyczny używa GPU, jeśli jest dostępny (Metal na macOS, Vulkan na Windows/Linux)."
-        },
-        "ort": {
-          "title": "Akceleracja ONNX",
-          "description": "Akceleracja sprzętowa dla modeli ONNX (Parakeet, Canary, Moonshine itp.). DirectML na Windows jest eksperymentalne. Modele mogą nie transkrybować poprawnie."
-        },
-        "gpuDevice": {
-          "auto": "Auto"
-        }
-      },
       "startHidden": {
         "label": "Uruchom ukryty",
         "description": "Uruchom w zasobniku systemowym bez otwierania okna."

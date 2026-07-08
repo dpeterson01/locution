@@ -273,19 +273,6 @@
         "label": "إبقاء الميكروفون مفتوحًا بين عمليات النسخ",
         "description": "يبقي بث الميكروفون مفتوحًا لمدة 30 ثانية بعد توقف التسجيل، مما يقلل التأخير عند النسخ المتتالي. قد يؤثر على جودة صوت البلوتوث أثناء التفعيل."
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "تسريع Whisper",
-          "description": "تسريع الأجهزة لنماذج Whisper. الوضع التلقائي يستخدم GPU إن توفر (Metal على macOS، Vulkan على Windows/Linux)."
-        },
-        "ort": {
-          "title": "تسريع ONNX",
-          "description": "تسريع الأجهزة لنماذج ONNX (Parakeet، Canary، Moonshine، إلخ). DirectML على Windows تجريبي. قد تفشل النماذج في النسخ."
-        },
-        "gpuDevice": {
-          "auto": "تلقائي"
-        }
-      },
       "startHidden": {
         "label": "بدء مخفي",
         "description": ".التشغيل في صينية النظام دون فتح النافذة"

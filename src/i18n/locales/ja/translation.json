@@ -294,19 +294,6 @@
         "label": "文字起こし間でマイクを開いたままにする",
         "description": "録音停止後30秒間マイクストリームを開いたままにし、連続した文字起こしの遅延を軽減します。Bluetooth音声品質に影響する場合があります。"
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "Whisper アクセラレーション",
-          "description": "Whisper モデルのハードウェアアクセラレーション。自動モードでは利用可能な場合 GPU を使用します（macOS では Metal、Windows/Linux では Vulkan）。"
-        },
-        "ort": {
-          "title": "ONNX アクセラレーション",
-          "description": "ONNX モデルのハードウェアアクセラレーション（Parakeet、Canary、Moonshine など）。Windows の DirectML は実験的です。モデルの文字起こしに失敗する場合があります。"
-        },
-        "gpuDevice": {
-          "auto": "自動"
-        }
-      },
       "startHidden": {
         "label": "非表示で起動",
         "description": "ウィンドウを開かずにシステムトレイに起動。"

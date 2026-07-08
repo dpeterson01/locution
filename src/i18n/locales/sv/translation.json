@@ -294,19 +294,6 @@
         "label": "Håll mikrofonen öppen mellan transkriptioner",
         "description": "Håller mikrofonströmmen öppen i 30 sekunder efter att inspelningen avslutats, vilket minskar latensen för transkriptioner efter varandra. Kan försämra Bluetooth-ljudkvaliteten medan den är aktiv."
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "Whisper-acceleration",
-          "description": "Hårdvaruacceleration för Whisper-modeller. Auto använder GPU om tillgängligt (Metal på macOS, Vulkan på Windows/Linux)."
-        },
-        "ort": {
-          "title": "ONNX-acceleration",
-          "description": "Hårdvaruacceleration för ONNX-modeller (Parakeet, Canary, Moonshine, etc.). DirectML på Windows är experimentellt. Modeller kan misslyckas med att transkribera."
-        },
-        "gpuDevice": {
-          "auto": "Auto"
-        }
-      },
       "startHidden": {
         "label": "Starta dold",
         "description": "Starta i systemfältet utan att öppna fönstret."

@@ -294,19 +294,6 @@
         "label": "Giữ micro mở giữa các lần phiên âm",
         "description": "Giữ luồng micro mở trong 30 giây sau khi dừng ghi âm, giảm độ trễ khi phiên âm liên tiếp. Có thể làm giảm chất lượng âm thanh Bluetooth khi đang hoạt động."
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "Tăng tốc Whisper",
-          "description": "Tăng tốc phần cứng cho các mô hình Whisper. Chế độ tự động sử dụng GPU nếu có (Metal trên macOS, Vulkan trên Windows/Linux)."
-        },
-        "ort": {
-          "title": "Tăng tốc ONNX",
-          "description": "Tăng tốc phần cứng cho các mô hình ONNX (Parakeet, Canary, Moonshine, v.v.). DirectML trên Windows là thử nghiệm. Các mô hình có thể không chuyển đổi giọng nói được."
-        },
-        "gpuDevice": {
-          "auto": "Tự động"
-        }
-      },
       "startHidden": {
         "label": "Khởi động ẩn",
         "description": "Khởi động vào khay hệ thống mà không mở cửa sổ."

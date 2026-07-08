@@ -294,19 +294,6 @@
         "label": "Transkripsiyonlar arasında mikrofonu açık tut",
         "description": "Kayıt durdurulduktan sonra mikrofon akışını 30 saniye açık tutar, ardışık transkripsiyonlarda gecikmeyi azaltır. Etkinken Bluetooth ses kalitesini düşürebilir."
       },
-      "acceleration": {
-        "transcribe": {
-          "title": "Whisper Hızlandırma",
-          "description": "Whisper modelleri için donanım hızlandırma. Otomatik mod, mevcutsa GPU kullanır (macOS'ta Metal, Windows/Linux'ta Vulkan)."
-        },
-        "ort": {
-          "title": "ONNX Hızlandırma",
-          "description": "ONNX modelleri için donanım hızlandırma (Parakeet, Canary, Moonshine vb.). Windows'ta DirectML deneyseldir. Modeller transkripsiyon yapamayabilir."
-        },
-        "gpuDevice": {
-          "auto": "Otomatik"
-        }
-      },
       "startHidden": {
         "label": "Gizli Başlat",
         "description": "Pencereyi açmadan sistem tepsisinde başlatır."
