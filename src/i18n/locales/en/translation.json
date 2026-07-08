@@ -491,7 +491,7 @@
         "title": "Per-app auto-mode",
         "toggle": {
           "title": "Auto-select mode by app",
-          "description": "Off by default. When a mapped app is frontmost, its mode is selected automatically — always visible in the overlay, never silent. A manual mode change overrides this for the rest of the app run."
+          "description": "Off by default. Map an app to a cleanup mode. When that app is frontmost, its mode is applied automatically and overrides the automatic short/long selection — always shown in the overlay, never silent. A manual mode change takes over for the rest of the session."
         },
         "rules": {
           "bundleIdPlaceholder": "Bundle id (e.g. com.apple.mail)",
@@ -702,24 +702,6 @@
         "title": "Support Handy",
         "description": "Help support Handy, the open-source project Locution is built on",
         "button": "Donate"
-      },
-      "acknowledgments": {
-        "title": "Acknowledgments",
-        "ggml": {
-          "title": "ggml",
-          "description": "High-performance tensor library for on-device machine learning inference",
-          "details": "Locution's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
-        },
-        "handy": {
-          "title": "Handy",
-          "description": "The open-source dictation app Locution is forked from",
-          "details": "Locution is a fork of Handy by CJ Pais. Thanks for building a local-first dictation app worth building on."
-        },
-        "whisper": {
-          "title": "Whisper",
-          "description": "Open speech recognition models from OpenAI",
-          "details": "Locution's Whisper-family transcription runs on OpenAI's Whisper models, released openly for on-device use."
-        }
       }
     }
   },

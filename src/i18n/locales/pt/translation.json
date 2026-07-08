@@ -635,14 +635,6 @@
         "description": "Ajude-nos a continuar construindo o Handy",
         "button": "Doar"
       },
-      "acknowledgments": {
-        "title": "Agradecimentos",
-        "ggml": {
-          "title": "ggml",
-          "description": "Inferência de alto desempenho do modelo de reconhecimento automático de fala Whisper da OpenAI",
-          "details": "O Handy usa ggml para processamento rápido e local de fala para texto. Agradecemos ao incrível trabalho de Georgi Gerganov e colaboradores."
-        }
-      },
       "whatsNewUpdates": {
         "label": "Mostrar novidades",
         "description": "Mostrar notas de versão após atualizações do Locution"

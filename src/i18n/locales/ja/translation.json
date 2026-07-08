@@ -635,14 +635,6 @@
         "description": "Handyの開発を支援してください",
         "button": "寄付する"
       },
-      "acknowledgments": {
-        "title": "謝辞",
-        "ggml": {
-          "title": "ggml",
-          "description": "OpenAIのWhisper自動音声認識モデルの高性能推論",
-          "details": "Handyは高速でローカルな音声からテキストへの変換にggmlを使用しています。Georgi Gerganov氏と貢献者の皆様の素晴らしい仕事に感謝します。"
-        }
-      },
       "whatsNewUpdates": {
         "label": "新機能を表示",
         "description": "Locutionのアップデート後にリリースノートを表示"

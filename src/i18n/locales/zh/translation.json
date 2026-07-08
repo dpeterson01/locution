@@ -635,14 +635,6 @@
         "description": "帮助我们继续开发 Handy",
         "button": "捐赠"
       },
-      "acknowledgments": {
-        "title": "致谢",
-        "ggml": {
-          "title": "ggml",
-          "description": "OpenAI Whisper 自动语音识别模型的高性能推理",
-          "details": "Handy 使用 ggml 进行快速的本地语音转文字处理。感谢 Georgi Gerganov 和贡献者们的出色工作。"
-        }
-      },
       "whatsNewUpdates": {
         "label": "显示新功能",
         "description": "Locution 更新后显示发行说明"

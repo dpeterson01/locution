@@ -635,14 +635,6 @@
         "description": "Aidez-nous à continuer à construire Handy",
         "button": "Faire un don"
       },
-      "acknowledgments": {
-        "title": "Remerciements",
-        "ggml": {
-          "title": "ggml",
-          "description": "Inférence haute performance du modèle de reconnaissance vocale automatique Whisper d'OpenAI",
-          "details": "Handy utilise ggml pour un traitement rapide et local de la parole en texte. Merci au travail incroyable de Georgi Gerganov et des contributeurs."
-        }
-      },
       "whatsNewUpdates": {
         "label": "Afficher les nouveautés",
         "description": "Afficher les notes de version après les mises à jour de Locution"
