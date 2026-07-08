@@ -1,6 +1,6 @@
 # Locution
 
-**A local dictation app for macOS (Windows coming soon): speak naturally, get clean, formatted text pasted into any app — with local Whisper transcription and local Ollama cleanup. Nothing leaves the machine.**
+**A local dictation app for macOS and Windows: speak naturally, get clean, formatted text pasted into any app — with local Whisper transcription and local Ollama cleanup. Nothing leaves the machine.**
 
 Locution is a fork of [Handy](https://github.com/cjpais/Handy), the free, open-source, extensible speech-to-text app that works completely offline. Handy proved out the whole pipeline — global hotkey, mic capture, VAD, local Whisper, optional LLM post-processing, paste — Locution builds on that with a configurable push-to-talk hotkey and adaptive-latency Ollama cleanup.
 
@@ -24,7 +24,7 @@ The process is entirely local:
 - Transcription uses your choice of models:
   - **Whisper models** (Small/Medium/Turbo/Large) with GPU acceleration when available
   - **Parakeet V3** - CPU-optimized model with excellent performance and automatic language detection
-- Runs on macOS; Windows support is coming soon
+- Runs on macOS and Windows
 
 ## Quick Start
 
@@ -43,13 +43,13 @@ The process is entirely local:
    ```
    Keep Ollama running (`ollama serve`). The speech-to-text model downloads on first launch.
 5. Launch **Locution** and grant Microphone and Accessibility permissions when prompted.
-6. Set your push-to-talk hotkey in Settings, then start dictating.
+6. Hold the push-to-talk hotkey (default **Ctrl+Space**), speak, and release — your text is transcribed and pasted into the active app. Change the hotkey in **Settings**.
 
-### Windows (coming soon)
+### Windows
 
-Windows support is coming soon and is currently in private testing. If you're helping test an early build:
+Windows builds (x64 and ARM64) are available on the [releases page](https://github.com/dpeterson01/locution/releases):
 
-1. Download the `.msi` or NSIS `.exe` installer from the [releases page](https://github.com/dpeterson01/locution/releases), or from a Main Branch Build run under the **Actions** tab.
+1. Download the `.msi` or `.exe` installer from the [releases page](https://github.com/dpeterson01/locution/releases).
 2. The build is unsigned, so Windows SmartScreen warns on first launch. Click **More info**, then **Run anyway**.
 3. Install [Ollama](https://ollama.com), pull the same two models listed above, and keep it running.
 4. Launch Locution, grant the microphone prompt, and use the default **Ctrl+Space** push-to-talk hotkey (change it in Settings).
@@ -109,7 +109,7 @@ Locution is early and under active development.
 ## Platform support
 
 - **macOS** (Apple Silicon and Intel) — primary, validated
-- **Windows** (x64 and ARM64) — coming soon
+- **Windows** (x64 and ARM64) — available
 
 Locution inherits Handy's Linux support in the codebase, but Linux is not currently built or tested for Locution.
 

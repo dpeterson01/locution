@@ -495,9 +495,6 @@
         },
         "rules": {
           "bundleIdPlaceholder": "Bundle id (e.g. com.apple.mail)",
-          "detectButton": "Use frontmost app",
-          "detected": "Detected {{name}}",
-          "detectFailed": "Couldn't detect the frontmost app",
           "modePlaceholder": "Select a mode",
           "add": "Add rule",
           "remove": "Remove rule for {{bundleId}}"
