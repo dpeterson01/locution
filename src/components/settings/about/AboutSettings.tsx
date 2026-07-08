@@ -9,10 +9,21 @@ import { AppDataDirectory } from "../AppDataDirectory";
 import { AppLanguageSelector } from "../AppLanguageSelector";
 import { ShowWhatsNewOnUpdate } from "../ShowWhatsNewOnUpdate";
 import { LogDirectory } from "../debug";
+import { useUpdateChecker } from "../../../hooks/useUpdateChecker";
 
 export const AboutSettings: React.FC = () => {
   const { t } = useTranslation();
   const [version, setVersion] = useState("");
+  const updater = useUpdateChecker();
+
+  const updateStatusLabel = () => {
+    if (updater.isInstalling) return t("settings.about.version.installing");
+    if (updater.isChecking) return t("settings.about.version.checking");
+    if (updater.updateAvailable)
+      return t("settings.about.version.updateAvailable");
+    if (updater.showUpToDate) return t("settings.about.version.upToDate");
+    return t("settings.about.version.checkForUpdates");
+  };
 
   useEffect(() => {
     const fetchVersion = async () => {
@@ -37,8 +48,24 @@ export const AboutSettings: React.FC = () => {
           description={t("settings.about.version.description")}
           grouped={true}
         >
-          {/* eslint-disable-next-line i18next/no-literal-string */}
-          <span className="text-sm font-mono">v{version}</span>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line i18next/no-literal-string */}
+            <span className="text-sm font-mono">v{version}</span>
+            {updater.updateChecksEnabled && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={
+                  updater.updateAvailable
+                    ? updater.installUpdate
+                    : updater.handleManualUpdateCheck
+                }
+                disabled={updater.isChecking || updater.isInstalling}
+              >
+                {updateStatusLabel()}
+              </Button>
+            )}
+          </div>
         </SettingContainer>
 
         <ShowWhatsNewOnUpdate descriptionMode="tooltip" grouped={true} />

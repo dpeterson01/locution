@@ -677,7 +677,12 @@
       "title": "About",
       "version": {
         "title": "Version",
-        "description": "Current version of Locution"
+        "description": "Current version of Locution",
+        "checkForUpdates": "Check for updates",
+        "checking": "Checking…",
+        "upToDate": "Up to date",
+        "updateAvailable": "Install update",
+        "installing": "Installing…"
       },
       "whatsNewUpdates": {
         "label": "Show What's New",
