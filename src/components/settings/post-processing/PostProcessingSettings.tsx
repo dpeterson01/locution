@@ -869,12 +869,16 @@ export const PostProcessingSettings: React.FC = () => {
   // above this block.
   return (
     <div className="space-y-6">
-      <SettingsGroup title={t("settings.postProcessing.api.title")}>
-        <PostProcessingSettingsApi />
+      <SettingsGroup title={t("settings.postProcessing.hotkey.title")}>
+        <ShortcutInput
+          shortcutId="transcribe_with_post_process"
+          descriptionMode="tooltip"
+          grouped={true}
+        />
       </SettingsGroup>
 
-      <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
-        <PostProcessingSettingsPrompts />
+      <SettingsGroup title={t("settings.postProcessing.api.title")}>
+        <PostProcessingSettingsApi />
       </SettingsGroup>
 
       <PostProcessingSettingsAdaptive />
@@ -883,15 +887,11 @@ export const PostProcessingSettings: React.FC = () => {
 
       <PostProcessingSettingsVoice />
 
-      <PostProcessingSettingsPerApp />
-
-      <SettingsGroup title={t("settings.postProcessing.hotkey.title")}>
-        <ShortcutInput
-          shortcutId="transcribe_with_post_process"
-          descriptionMode="tooltip"
-          grouped={true}
-        />
+      <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
+        <PostProcessingSettingsPrompts />
       </SettingsGroup>
+
+      <PostProcessingSettingsPerApp />
     </div>
   );
 };
