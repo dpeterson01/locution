@@ -611,11 +611,6 @@
         "label": "追加尾部空格",
         "description": "在粘贴的转录后添加空格"
       },
-      "keyboardImplementation": {
-        "title": "键盘实现",
-        "description": "选择键盘快捷键的后端。",
-        "bindingsReset": "键盘快捷键不兼容，已重置为默认值"
-      },
       "paths": {
         "appData": "应用数据:",
         "models": "模型:",

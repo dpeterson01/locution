@@ -611,11 +611,6 @@
         "label": "Přidat koncovou mezeru",
         "description": "Přidat mezeru po vloženém přepisu"
       },
-      "keyboardImplementation": {
-        "title": "Implementace klávesnice",
-        "description": "Zvolte backend pro klávesové zkratky.",
-        "bindingsReset": "Klávesové zkratky byly nekompatibilní a byly obnoveny na výchozí hodnoty"
-      },
       "paths": {
         "appData": "Data aplikace:",
         "models": "Modely:",

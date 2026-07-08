@@ -982,28 +982,28 @@ fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
     if settings
         .post_process_selected_prompt_id
         .as_deref()
-        .map_or(true, |id| RETIRED_MODE_IDS.contains(&id))
+        .is_none_or(|id| RETIRED_MODE_IDS.contains(&id))
     {
         settings.post_process_selected_prompt_id = Some(DEFAULT_MODE_ID.to_string());
     }
     if settings
         .default_mode_id
         .as_deref()
-        .map_or(false, |id| RETIRED_MODE_IDS.contains(&id))
+        .is_some_and(|id| RETIRED_MODE_IDS.contains(&id))
     {
         settings.default_mode_id = Some(DEFAULT_MODE_ID.to_string());
     }
     if settings
         .short_prompt_id
         .as_deref()
-        .map_or(true, |id| RETIRED_MODE_IDS.contains(&id))
+        .is_none_or(|id| RETIRED_MODE_IDS.contains(&id))
     {
         settings.short_prompt_id = Some(SHORT_DICTATION_MODE_ID.to_string());
     }
     if settings
         .long_prompt_id
         .as_deref()
-        .map_or(true, |id| RETIRED_MODE_IDS.contains(&id))
+        .is_none_or(|id| RETIRED_MODE_IDS.contains(&id))
     {
         settings.long_prompt_id = Some(LONG_DICTATION_MODE_ID.to_string());
     }
@@ -1357,6 +1357,15 @@ fn apply_settings_migrations(
         } else {
             OverlayStyle::Live
         };
+        updated = true;
+    }
+
+    // The keyboard backend is now auto-selected per platform; the retired
+    // Experimental dropdown no longer exists. Ignore any persisted override and
+    // force the platform default, persisting it so every read stays consistent.
+    let platform_default = KeyboardImplementation::default();
+    if settings.keyboard_implementation != platform_default {
+        settings.keyboard_implementation = platform_default;
         updated = true;
     }
 

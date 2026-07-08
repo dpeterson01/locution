@@ -4,7 +4,6 @@ import { ExperimentalToggle } from "../ExperimentalToggle";
 import { PostProcessingToggle } from "../PostProcessingToggle";
 import { OllamaSetupCard } from "../OllamaSetupCard";
 import { PostProcessingSettings } from "../post-processing/PostProcessingSettings";
-import { KeyboardImplementationSelector } from "../debug/KeyboardImplementationSelector";
 import { AccelerationSelector } from "../AccelerationSelector";
 import { LazyStreamClose } from "../LazyStreamClose";
 import { useSettings } from "../../../hooks/useSettings";
@@ -23,10 +22,6 @@ export const ExperimentalSettings: React.FC = () => {
       {experimentalEnabled && (
         <SettingsGroup>
           <div className="settings-expand-in divide-y divide-mid-gray/20">
-            <KeyboardImplementationSelector
-              descriptionMode="tooltip"
-              grouped={true}
-            />
             <AccelerationSelector descriptionMode="tooltip" grouped={true} />
             <LazyStreamClose descriptionMode="tooltip" grouped={true} />
             <PostProcessingToggle descriptionMode="tooltip" grouped={true} />
