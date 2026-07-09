@@ -11,6 +11,7 @@ mod helpers;
 mod input;
 mod llm_client;
 mod managers;
+mod move_to_applications;
 mod ollama_setup;
 mod overlay;
 mod per_app_mode;
@@ -888,6 +889,11 @@ pub fn run(cli_args: CliArgs) {
             app.manage(TranscriptionCoordinator::new(app_handle.clone()));
 
             initialize_core_logic(&app_handle);
+
+            // First-run nudge to install into /Applications (macOS only; no-op
+            // elsewhere). Runs on its own thread and only acts when launched
+            // from a DMG / Downloads / translocated copy.
+            move_to_applications::maybe_prompt(&app_handle);
 
             // Populate the overlay-enabled cache from initial settings so the
             // audio path (overlay::emit_levels, called ~24 Hz during recording)
