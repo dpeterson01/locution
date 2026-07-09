@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { RefreshCcw } from "lucide-react";
+import { Download, Loader2, RefreshCcw } from "lucide-react";
 import { commands } from "@/bindings";
+import { useOllamaModelPull } from "../../../hooks/useOllamaModelPull";
 
 import {
   Dropdown,
@@ -451,6 +452,195 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
   );
 };
 
+// A length-tier model input (Fast/Thorough) with an inline Ollama "Download"
+// affordance: probe first (never assume Ollama is running), pull if running,
+// or offer to start Ollama if not. One useOllamaModelPull instance per field
+// so the Fast and Thorough models download independently.
+const TierModelField: React.FC<{
+  value: string;
+  options: { value: string; label: string }[];
+  isLoading: boolean;
+  disabled: boolean;
+  placeholder: string;
+  onChange: (value: string) => void;
+  trailing?: React.ReactNode;
+}> = ({
+  value,
+  options,
+  isLoading,
+  disabled,
+  placeholder,
+  onChange,
+  trailing,
+}) => {
+  const { t } = useTranslation();
+  const [modelsPresent, setModelsPresent] = useState<string[]>([]);
+  const modelDownload = useOllamaModelPull();
+  const pullingModelRef = useRef<string>("");
+
+  useEffect(() => {
+    commands.probeOllamaSetup().then((result) => {
+      setModelsPresent(result.models_present);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (modelDownload.state.status === "present") {
+      setModelsPresent((prev) =>
+        prev.includes(value.trim()) ? prev : [...prev, value.trim()],
+      );
+    }
+  }, [modelDownload.state.status]);
+
+  const trimmed = value.trim();
+  const modelPresent = trimmed === "" || modelsPresent.includes(trimmed);
+  const downloadIsForCurrent = pullingModelRef.current === trimmed;
+  const downloadState = downloadIsForCurrent
+    ? modelDownload.state
+    : { status: "idle" as const };
+
+  const handleStartDownload = () => {
+    pullingModelRef.current = trimmed;
+    modelDownload.startDownload(trimmed);
+  };
+  const handleStartOllamaThenDownload = () => {
+    pullingModelRef.current = trimmed;
+    modelDownload.startOllamaThenDownload(trimmed);
+  };
+  const handleRetryDownload = () => {
+    pullingModelRef.current = trimmed;
+    modelDownload.retry(trimmed);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <ModelSelect
+          value={value}
+          options={options}
+          disabled={disabled}
+          isLoading={isLoading}
+          placeholder={placeholder}
+          onSelect={onChange}
+          onCreate={onChange}
+          onBlur={() => {}}
+          className="flex-1 min-w-[380px]"
+        />
+        {trailing}
+      </div>
+
+      {!modelPresent && downloadState.status === "idle" && (
+        <Button
+          onClick={handleStartDownload}
+          variant="secondary"
+          size="sm"
+          className="self-start"
+        >
+          <Download className="w-3.5 h-3.5 mr-1.5" />
+          {t("settings.postProcessing.adaptive.download.button")}
+        </Button>
+      )}
+
+      {downloadState.status === "checking" && (
+        <div className="flex items-center gap-2 text-xs text-mid-gray/70">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          {t("settings.postProcessing.adaptive.download.checking")}
+        </div>
+      )}
+
+      {downloadState.status === "not_running" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-mid-gray/70">
+            {t("settings.postProcessing.adaptive.download.notRunning")}
+          </p>
+          <Button
+            onClick={handleStartOllamaThenDownload}
+            variant="secondary"
+            size="sm"
+            className="self-start"
+          >
+            {t("settings.postProcessing.adaptive.download.startOllama")}
+          </Button>
+        </div>
+      )}
+
+      {downloadState.status === "starting" && (
+        <div className="flex items-center gap-2 text-xs text-mid-gray/70">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          {t("settings.postProcessing.adaptive.download.starting")}
+        </div>
+      )}
+
+      {downloadState.status === "pulling" && (
+        <div className="flex flex-col gap-1">
+          <div className="w-full h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-logo-primary rounded-full transition-all duration-300"
+              style={{ width: `${downloadState.percentage ?? 0}%` }}
+            />
+          </div>
+          <p className="text-xs text-mid-gray/70">
+            {t("settings.postProcessing.adaptive.download.pulling", {
+              percentage: downloadState.percentage ?? 0,
+            })}
+          </p>
+        </div>
+      )}
+
+      {(downloadState.status === "interrupted" ||
+        downloadState.status === "disk_full" ||
+        downloadState.status === "no_network") && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-mid-gray/70">
+            {t(
+              `settings.postProcessing.adaptive.download.${
+                downloadState.status === "interrupted"
+                  ? "interrupted"
+                  : downloadState.status === "disk_full"
+                    ? "diskFull"
+                    : "noNetwork"
+              }`,
+            )}
+          </p>
+          <Button
+            onClick={handleRetryDownload}
+            variant="secondary"
+            size="sm"
+            className="self-start"
+          >
+            {t("settings.postProcessing.adaptive.download.retry")}
+          </Button>
+        </div>
+      )}
+
+      {downloadState.status === "unknown_model" && (
+        <p className="text-xs text-red-400">
+          <Trans
+            i18nKey="settings.postProcessing.adaptive.download.unknownModel"
+            values={{ name: trimmed }}
+            components={{
+              link: (
+                <a
+                  href="https://ollama.com/library"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                />
+              ),
+            }}
+          />
+        </p>
+      )}
+
+      {downloadState.status === "other_error" && (
+        <p className="text-xs text-red-400">
+          {t("settings.postProcessing.adaptive.download.otherError")}
+        </p>
+      )}
+    </div>
+  );
+};
+
 const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
   const { t } = useTranslation();
   const state = usePostProcessProviderState();
@@ -522,19 +712,14 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
         layout="stacked"
         grouped={true}
       >
-        <div className="flex items-center gap-2">
-          <ModelSelect
-            value={shortModel}
-            options={tierModelOptions}
-            disabled={isUpdating("short_model")}
-            isLoading={state.isFetchingModels}
-            placeholder={modelPlaceholder}
-            onSelect={(value) => updateSetting("short_model", value)}
-            onCreate={(value) => updateSetting("short_model", value)}
-            onBlur={() => {}}
-            className="flex-1 min-w-[380px]"
-          />
-        </div>
+        <TierModelField
+          value={shortModel}
+          options={tierModelOptions}
+          disabled={isUpdating("short_model")}
+          isLoading={state.isFetchingModels}
+          placeholder={modelPlaceholder}
+          onChange={(value) => updateSetting("short_model", value)}
+        />
       </SettingContainer>
       <SettingContainer
         title={t("settings.postProcessing.adaptive.longModel.title")}
@@ -545,29 +730,26 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
         layout="stacked"
         grouped={true}
       >
-        <div className="flex items-center gap-2">
-          <ModelSelect
-            value={longModel}
-            options={tierModelOptions}
-            disabled={isUpdating("long_model")}
-            isLoading={state.isFetchingModels}
-            placeholder={modelPlaceholder}
-            onSelect={(value) => updateSetting("long_model", value)}
-            onCreate={(value) => updateSetting("long_model", value)}
-            onBlur={() => {}}
-            className="flex-1 min-w-[380px]"
-          />
-          <ResetButton
-            onClick={state.handleRefreshModels}
-            disabled={state.isFetchingModels}
-            ariaLabel={t("settings.postProcessing.api.model.refreshModels")}
-            className="flex h-10 w-10 items-center justify-center"
-          >
-            <RefreshCcw
-              className={`h-4 w-4 ${state.isFetchingModels ? "animate-spin" : ""}`}
-            />
-          </ResetButton>
-        </div>
+        <TierModelField
+          value={longModel}
+          options={tierModelOptions}
+          disabled={isUpdating("long_model")}
+          isLoading={state.isFetchingModels}
+          placeholder={modelPlaceholder}
+          onChange={(value) => updateSetting("long_model", value)}
+          trailing={
+            <ResetButton
+              onClick={state.handleRefreshModels}
+              disabled={state.isFetchingModels}
+              ariaLabel={t("settings.postProcessing.api.model.refreshModels")}
+              className="flex h-10 w-10 items-center justify-center"
+            >
+              <RefreshCcw
+                className={`h-4 w-4 ${state.isFetchingModels ? "animate-spin" : ""}`}
+              />
+            </ResetButton>
+          }
+        />
       </SettingContainer>
       <SettingContainer
         title={t("settings.postProcessing.adaptive.skip.title")}

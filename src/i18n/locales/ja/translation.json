@@ -454,6 +454,20 @@
         "skip": {
           "title": "Skip AI cleanup under (characters)",
           "description": "Transcripts shorter than this skip the AI model entirely and paste immediately. 0 disables skipping."
+        },
+        "download": {
+          "button": "ダウンロード",
+          "checking": "確認中…",
+          "notRunning": "Ollama が起動していません。",
+          "startOllama": "Ollama を起動",
+          "starting": "Ollama を起動中…",
+          "pulling": "ダウンロード中… {{percentage}}%",
+          "interrupted": "ダウンロードが中断されました。",
+          "diskFull": "ディスクの空き容量が足りません。",
+          "noNetwork": "ネットワークに接続できませんでした。",
+          "retry": "再試行",
+          "unknownModel": "「{{name}}」は Ollama が認識するモデルではありません。綴りを確認するか、<link>ollama.com/library</link> で有効なモデル名を探してください。",
+          "otherError": "このモデルのダウンロード中に問題が発生しました。"
         }
       },
       "context": {

@@ -454,6 +454,20 @@
         "skip": {
           "title": "Skip AI cleanup under (characters)",
           "description": "Transcripts shorter than this skip the AI model entirely and paste immediately. 0 disables skipping."
+        },
+        "download": {
+          "button": "下载",
+          "checking": "正在检查…",
+          "notRunning": "Ollama 未运行。",
+          "startOllama": "启动 Ollama",
+          "starting": "正在启动 Ollama…",
+          "pulling": "正在下载… {{percentage}}%",
+          "interrupted": "下载已中断。",
+          "diskFull": "磁盘空间不足。",
+          "noNetwork": "无法连接网络。",
+          "retry": "重试",
+          "unknownModel": "“{{name}}”不是 Ollama 识别的模型。请检查拼写，或在 <link>ollama.com/library</link> 查找有效的模型名称。",
+          "otherError": "下载此模型时出错。"
         }
       },
       "context": {

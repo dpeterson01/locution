@@ -454,6 +454,20 @@
         "skip": {
           "title": "Skip AI cleanup under (characters)",
           "description": "Transcripts shorter than this skip the AI model entirely and paste immediately. 0 disables skipping."
+        },
+        "download": {
+          "button": "Descargar",
+          "checking": "Comprobando…",
+          "notRunning": "Ollama no está en marcha.",
+          "startOllama": "Iniciar Ollama",
+          "starting": "Iniciando Ollama…",
+          "pulling": "Descargando… {{percentage}}%",
+          "interrupted": "La descarga se interrumpió.",
+          "diskFull": "No hay suficiente espacio en disco.",
+          "noNetwork": "No se pudo acceder a la red.",
+          "retry": "Reintentar",
+          "unknownModel": "\"{{name}}\" no es un modelo que Ollama reconozca. Revisa la ortografía o busca nombres de modelos válidos en <link>ollama.com/library</link>.",
+          "otherError": "Algo salió mal al descargar este modelo."
         }
       },
       "context": {
