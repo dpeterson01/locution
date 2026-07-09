@@ -1560,16 +1560,72 @@ mod tests {
     #[test]
     fn default_mode_id_backfills_from_current_selection_not_reset_to_clean_up() {
         // An upgrading store had no default_mode_id but did have a selected
-        // mode the user had actually picked (Rewrite) — the backfill must
-        // preserve that choice, not silently reset it to Clean up.
+        // mode the user had actually picked (Communication Apps); the backfill
+        // must preserve that choice, not silently reset it to the default.
         let mut settings = get_default_settings();
-        settings.post_process_selected_prompt_id = Some("mode_rewrite".to_string());
+        settings.post_process_selected_prompt_id = Some("mode_communication".to_string());
         settings.default_mode_id = None;
         settings.default_mode_id_seeded = false;
 
         assert!(ensure_post_process_defaults(&mut settings));
-        assert_eq!(settings.default_mode_id, Some("mode_rewrite".to_string()));
+        assert_eq!(
+            settings.default_mode_id,
+            Some("mode_communication".to_string())
+        );
         assert!(settings.default_mode_id_seeded);
+    }
+
+    #[test]
+    fn v2_migration_refreshes_unedited_defaults_but_keeps_customizations() {
+        // A pre-v2 store on the old models, with one built-in mode still on its
+        // shipped default prompt and one the user has edited.
+        let mut settings = get_default_settings();
+        settings.short_model = "phi4-mini:latest".to_string();
+        settings.long_model = "gemma3:12b".to_string();
+
+        let refreshed_id = SHORT_DICTATION_MODE_ID.to_string();
+        let edited_id = "mode_communication".to_string();
+        let edited_prompt = "MY OWN PROMPT ${output}".to_string();
+        for prompt in settings.post_process_prompts.iter_mut() {
+            if prompt.id == refreshed_id {
+                prompt.prompt = pre_v2_default_prompt(&refreshed_id).unwrap().to_string();
+            } else if prompt.id == edited_id {
+                prompt.prompt = edited_prompt.clone();
+            }
+        }
+
+        let raw = serde_json::json!({ "settings_schema_version": 1 });
+        assert!(apply_settings_migrations(&mut settings, &raw));
+
+        // Old model defaults are refreshed to the current ones.
+        assert_eq!(settings.short_model, default_short_model());
+        assert_eq!(settings.long_model, default_long_model());
+
+        // The unedited default prompt is refreshed to the current default.
+        let expected_prompt = default_post_process_prompts()
+            .into_iter()
+            .find(|p| p.id == refreshed_id)
+            .unwrap()
+            .prompt;
+        let refreshed = settings
+            .post_process_prompts
+            .iter()
+            .find(|p| p.id == refreshed_id)
+            .unwrap();
+        assert_eq!(refreshed.prompt, expected_prompt);
+
+        // The user's edited prompt is left untouched.
+        let edited = settings
+            .post_process_prompts
+            .iter()
+            .find(|p| p.id == edited_id)
+            .unwrap();
+        assert_eq!(edited.prompt, edited_prompt);
+
+        assert_eq!(
+            settings.settings_schema_version,
+            CURRENT_SETTINGS_SCHEMA_VERSION
+        );
     }
 
     #[test]
