@@ -523,25 +523,6 @@
         "cancel": "Cancel",
         "selectToEdit": "Select a mode above to view and edit its details.",
         "createFirst": "Click 'Create New Mode' above to create your first cleanup mode.",
-        "model": {
-          "label": "Mode Model",
-          "description": "Preferred model for this mode. Type a model name to use one not yet listed, or leave empty to use the provider's configured model.",
-          "placeholder": "Search or type a model name",
-          "download": {
-            "button": "Download",
-            "checking": "Checking…",
-            "notRunning": "Ollama isn't running.",
-            "startOllama": "Start Ollama",
-            "starting": "Starting Ollama…",
-            "pulling": "Downloading… {{percentage}}%",
-            "interrupted": "Download was interrupted.",
-            "diskFull": "Not enough disk space.",
-            "noNetwork": "Couldn't reach the network.",
-            "retry": "Retry",
-            "unknownModel": "\"{{name}}\" isn't a model Ollama recognizes. Check the spelling, or find valid model names at <link>ollama.com/library</link>.",
-            "otherError": "Something went wrong pulling this model."
-          }
-        },
         "useContext": {
           "label": "Use screen context",
           "description": "Feed the active app, selected text, and clipboard into this mode's prompt.",

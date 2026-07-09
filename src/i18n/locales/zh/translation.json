@@ -15,9 +15,9 @@
     "advanced": "高级",
     "postProcessing": "后处理",
     "history": "历史记录",
-    "debug": "调试",
     "about": "关于",
-    "experimental": "Experimental"
+    "experimental": "Experimental",
+    "diagnostics": "诊断"
   },
   "onboarding": {
     "subtitle": "请选择一个转录模型以开始使用",
@@ -393,6 +393,15 @@
       "voiceActivityDetection": {
         "title": "Voice Activity Detection",
         "description": "Filter silence from recordings. Streaming-capable models use a longer VAD tail; disabling VAD records raw audio."
+      },
+      "snippets": {
+        "title": "代码片段",
+        "description": "将口语短语扩展为固定文本的快捷方式——例如说“我的邮箱”即可插入你的地址。扩展在 AI 清理之后进行，因此会按原样插入。",
+        "triggerPlaceholder": "触发短语",
+        "expansionPlaceholder": "扩展文本",
+        "add": "添加",
+        "remove": "删除片段“{{trigger}}”",
+        "duplicate": "“{{trigger}}”的片段已存在"
       }
     },
     "postProcessing": {
@@ -474,25 +483,6 @@
         "cancel": "取消",
         "selectToEdit": "选择上方的提示词以查看和编辑其详细信息。",
         "createFirst": "点击上方的「创建新提示词」来创建您的第一个后处理提示词。",
-        "model": {
-          "label": "Mode Model",
-          "description": "Preferred model for this mode. Type a model name to use one not yet listed, or leave empty to use the provider's configured model.",
-          "placeholder": "Search or type a model name",
-          "download": {
-            "button": "Download",
-            "checking": "Checking…",
-            "notRunning": "Ollama isn't running.",
-            "startOllama": "Start Ollama",
-            "starting": "Starting Ollama…",
-            "pulling": "Downloading… {{percentage}}%",
-            "interrupted": "Download was interrupted.",
-            "diskFull": "Not enough disk space.",
-            "noNetwork": "Couldn't reach the network.",
-            "retry": "Retry",
-            "unknownModel": "\"{{name}}\" isn't a model Ollama recognizes. Check the spelling, or find valid model names at <link>ollama.com/library</link>.",
-            "otherError": "Something went wrong pulling this model."
-          }
-        },
         "useContext": {
           "label": "Use screen context",
           "description": "Feed the active app, selected text, and clipboard into this mode's prompt.",
@@ -506,6 +496,46 @@
         "setUp": "Set up",
         "finish": "Finish setup",
         "dialogTitle": "Set up local cleanup"
+      },
+      "voice": {
+        "title": "语气",
+        "card": {
+          "toggle": {
+            "title": "应用我的语气",
+            "description": "在每次有足够能力遵循的清理调用中，加入固定的防护，避免出现 AI 腔的清理（不使用破折号、不凑三段式、不出现“希望这有帮助”），并附上下方你自己的语气卡片。全局且始终启用——适用于更高质量的模式，在快速模式（如“清理”）中会自动跳过，因此在那里预期不会有可见效果。"
+          },
+          "textLabel": "我的语气",
+          "textPlaceholder": "描述你实际的写作方式——句子长度、词汇、习惯。",
+          "save": "保存",
+          "distill": {
+            "label": "从写作样本训练",
+            "description": "粘贴 1 到 5 段你自己的简短写作样本，用空行分隔。此操作在你点击“提炼”时运行一次，绝不会在每次听写时运行。",
+            "placeholder": "在此粘贴一段样本。\n\n用空行分隔多段样本。",
+            "button": "提炼成我的语气卡片",
+            "distilling": "正在提炼…",
+            "noSamples": "请先添加至少一段写作样本。",
+            "success": "已根据你的写作样本更新语气卡片。"
+          }
+        }
+      },
+      "perApp": {
+        "title": "按应用自动模式",
+        "toggle": {
+          "title": "按应用自动选择模式",
+          "description": "默认关闭。将某个应用映射到某个清理模式。当该应用处于最前台时，会自动应用其模式并覆盖自动的短/长选择——始终显示在浮层中，绝不静默。手动切换模式后将在本次会话的其余时间内优先生效。"
+        },
+        "rules": {
+          "appNamePlaceholder": "应用名称（例如 Slack）",
+          "lookup": {
+            "button": "查找 Bundle ID",
+            "notFound": "找不到名为“{{name}}”的应用。请检查拼写并确认它已安装。",
+            "unsupported": "按应用名称查找仅在 macOS 上可用。请改为输入进程名称。"
+          },
+          "bundleIdPlaceholder": "Bundle id（例如 com.apple.mail）",
+          "modePlaceholder": "选择一个模式",
+          "add": "添加规则",
+          "remove": "删除 {{bundleId}} 的规则"
+        }
       }
     },
     "history": {
@@ -521,7 +551,10 @@
       "retranscribe": "重新转录",
       "retranscribeError": "重新转录失败。请重试。",
       "transcribing": "转录中...",
-      "transcriptionFailed": "转录失败。您可以使用重试图标重新转录。"
+      "transcriptionFailed": "转录失败。您可以使用重试图标重新转录。",
+      "rawText": "原始",
+      "cleanedText": "已清理",
+      "cleanupFailed": "清理失败"
     },
     "debug": {
       "title": "调试",
@@ -610,13 +643,31 @@
         "button": "预览",
         "noNotes": "未找到内置发行说明",
         "error": "无法预览发行说明"
+      },
+      "debugModeToggle": {
+        "label": "调试模式",
+        "description": "在下方查看器中显示详细日志。可能包含文件路径或转写文本。"
+      },
+      "exportDiagnostics": {
+        "title": "导出诊断信息",
+        "description": "保存可共享的近期故障和设置包以便排查问题。绝不包含你的听写文本或音频。",
+        "button": "导出",
+        "exporting": "正在导出…",
+        "success": "诊断信息已导出。",
+        "failure": "导出诊断信息失败。"
       }
     },
     "about": {
       "title": "关于",
       "version": {
         "title": "版本",
-        "description": "Locution 的当前版本"
+        "description": "Locution 的当前版本",
+        "checkForUpdates": "检查更新",
+        "checking": "正在检查…",
+        "upToDate": "已是最新",
+        "updateAvailable": "安装更新",
+        "installing": "正在安装…",
+        "author": "Locution，由 Derek Peterson 开发"
       },
       "appDataDirectory": {
         "title": "应用数据目录",
@@ -680,7 +731,19 @@
     "modelLoadFailedUnknown": "未知模型",
     "pasteFailedTitle": "粘贴文本失败",
     "pasteFailed": "无法将文本粘贴到当前活动的应用程序中。",
-    "transcriptionFailedTitle": "转录失败"
+    "transcriptionFailedTitle": "转录失败",
+    "recordingFailedGeneric": "无法开始录音。请重试。",
+    "modelLoadFailedHint": "请在“高级”设置中查看可用模型。",
+    "transcriptionFailed": "语音转文字失败。请重试。",
+    "diagnostics": {
+      "ollamaUnreachableTitle": "清理无法连接到 Ollama",
+      "ollamaUnreachableHint": "请打开 Ollama，或在其运行前于“设置”中关闭清理。",
+      "modelMissing": "所选的清理模型尚未安装。",
+      "whisperModelNotLoaded": "语音转文字模型尚未就绪——请稍后重试。",
+      "accessibilityMissingTitle": "需要辅助功能权限",
+      "accessibilityMissingHint": "在你于“系统设置”中授予辅助功能权限之前，Locution 无法向其他应用输入文字。",
+      "postProcessFailed": "清理失败——已保留你的原始听写内容。"
+    }
   },
   "appLanguage": {
     "title": "应用语言",
@@ -697,6 +760,12 @@
       "settings": "Open settings",
       "expand": "Expand overlay",
       "collapse": "Collapse overlay"
+    },
+    "cleaned": "已清理",
+    "transcribed": "已转写",
+    "cleanupFailed": "清理失败",
+    "mode": {
+      "activeHint": "模式：{{name}}"
     }
   },
   "whatsNew": {

@@ -15,9 +15,9 @@
     "advanced": "詳細設定",
     "postProcessing": "後処理",
     "history": "履歴",
-    "debug": "デバッグ",
     "about": "概要",
-    "experimental": "Experimental"
+    "experimental": "Experimental",
+    "diagnostics": "診断"
   },
   "onboarding": {
     "subtitle": "開始するには、文字起こしモデルを選択してください",
@@ -393,6 +393,15 @@
       "voiceActivityDetection": {
         "title": "Voice Activity Detection",
         "description": "Filter silence from recordings. Streaming-capable models use a longer VAD tail; disabling VAD records raw audio."
+      },
+      "snippets": {
+        "title": "スニペット",
+        "description": "話した語句を固定テキストに展開するショートカット。例えば「マイメール」と言うと自分のアドレスを挿入します。展開は AI クリーンアップの後に行われるため、書いたとおりに挿入されます。",
+        "triggerPlaceholder": "トリガーとなる語句",
+        "expansionPlaceholder": "展開テキスト",
+        "add": "追加",
+        "remove": "スニペット「{{trigger}}」を削除",
+        "duplicate": "「{{trigger}}」のスニペットはすでに存在します"
       }
     },
     "postProcessing": {
@@ -474,25 +483,6 @@
         "cancel": "キャンセル",
         "selectToEdit": "上からプロンプトを選択して、詳細を表示・編集します。",
         "createFirst": "上の「新しいプロンプトを作成」をクリックして、最初の後処理プロンプトを作成してください。",
-        "model": {
-          "label": "Mode Model",
-          "description": "Preferred model for this mode. Type a model name to use one not yet listed, or leave empty to use the provider's configured model.",
-          "placeholder": "Search or type a model name",
-          "download": {
-            "button": "Download",
-            "checking": "Checking…",
-            "notRunning": "Ollama isn't running.",
-            "startOllama": "Start Ollama",
-            "starting": "Starting Ollama…",
-            "pulling": "Downloading… {{percentage}}%",
-            "interrupted": "Download was interrupted.",
-            "diskFull": "Not enough disk space.",
-            "noNetwork": "Couldn't reach the network.",
-            "retry": "Retry",
-            "unknownModel": "\"{{name}}\" isn't a model Ollama recognizes. Check the spelling, or find valid model names at <link>ollama.com/library</link>.",
-            "otherError": "Something went wrong pulling this model."
-          }
-        },
         "useContext": {
           "label": "Use screen context",
           "description": "Feed the active app, selected text, and clipboard into this mode's prompt.",
@@ -506,6 +496,46 @@
         "setUp": "Set up",
         "finish": "Finish setup",
         "dialogTitle": "Set up local cleanup"
+      },
+      "voice": {
+        "title": "文体",
+        "card": {
+          "toggle": {
+            "title": "自分の文体を適用",
+            "description": "AI っぽいクリーンアップを防ぐ固定のガード（ダッシュを使わない、三つ組みの水増しをしない、「お役に立てば幸いです」を入れない）に加えて、下の自分の文体カードを、それに従えるだけの能力があるすべてのクリーンアップ呼び出しに適用します。全体に常時有効で、高品質なモードに適用され、高速なモード（例：クリーンアップ）では自動的にスキップされるため、そこでは目に見える効果はありません。"
+          },
+          "textLabel": "自分の文体",
+          "textPlaceholder": "実際の書き方を説明してください——文の長さ、語彙、癖など。",
+          "save": "保存",
+          "distill": {
+            "label": "文章サンプルから学習",
+            "description": "自分の文章の短いサンプルを 1〜5 個、空行で区切って貼り付けてください。これは「抽出」をクリックしたときに一度だけ実行され、口述ごとには実行されません。",
+            "placeholder": "ここにサンプルを貼り付けます。\n\n複数のサンプルは空行で区切ってください。",
+            "button": "自分の文体カードに抽出",
+            "distilling": "抽出中…",
+            "noSamples": "まず文章サンプルを少なくとも 1 つ追加してください。",
+            "success": "文章サンプルから文体カードを更新しました。"
+          }
+        }
+      },
+      "perApp": {
+        "title": "アプリ別の自動モード",
+        "toggle": {
+          "title": "アプリごとにモードを自動選択",
+          "description": "既定ではオフ。アプリをクリーンアップモードに割り当てます。そのアプリが最前面になると、そのモードが自動的に適用され、自動の短文／長文の選択を上書きします——常にオーバーレイに表示され、こっそり切り替わることはありません。手動でモードを変更すると、そのセッションの残りの間はそちらが優先されます。"
+        },
+        "rules": {
+          "appNamePlaceholder": "アプリ名（例：Slack）",
+          "lookup": {
+            "button": "バンドル ID を検索",
+            "notFound": "「{{name}}」という名前のアプリが見つかりませんでした。綴りを確認し、インストールされていることを確かめてください。",
+            "unsupported": "アプリ名での検索は macOS でのみ利用できます。代わりにプロセス名を入力してください。"
+          },
+          "bundleIdPlaceholder": "バンドル ID（例：com.apple.mail）",
+          "modePlaceholder": "モードを選択",
+          "add": "ルールを追加",
+          "remove": "{{bundleId}} のルールを削除"
+        }
       }
     },
     "history": {
@@ -521,7 +551,10 @@
       "retranscribe": "再文字起こし",
       "retranscribeError": "再文字起こしに失敗しました。もう一度お試しください。",
       "transcribing": "文字起こし中...",
-      "transcriptionFailed": "文字起こしに失敗しました。リトライアイコンを使用して再文字起こしできます。"
+      "transcriptionFailed": "文字起こしに失敗しました。リトライアイコンを使用して再文字起こしできます。",
+      "rawText": "元のまま",
+      "cleanedText": "クリーンアップ済み",
+      "cleanupFailed": "クリーンアップ失敗"
     },
     "debug": {
       "title": "デバッグ",
@@ -610,13 +643,31 @@
         "button": "プレビュー",
         "noNotes": "同梱リリースノートが見つかりません",
         "error": "リリースノートのプレビューに失敗しました"
+      },
+      "debugModeToggle": {
+        "label": "デバッグモード",
+        "description": "下のビューアに詳細なログを表示します。ファイルパスや文字起こしテキストが含まれる場合があります。"
+      },
+      "exportDiagnostics": {
+        "title": "診断情報をエクスポート",
+        "description": "トラブルシューティング用に、最近の障害と設定を共有可能なバンドルとして保存します。口述したテキストや音声は一切含まれません。",
+        "button": "エクスポート",
+        "exporting": "エクスポート中…",
+        "success": "診断情報をエクスポートしました。",
+        "failure": "診断情報のエクスポートに失敗しました。"
       }
     },
     "about": {
       "title": "概要",
       "version": {
         "title": "バージョン",
-        "description": "Locutionの現在のバージョン"
+        "description": "Locutionの現在のバージョン",
+        "checkForUpdates": "アップデートを確認",
+        "checking": "確認中…",
+        "upToDate": "最新です",
+        "updateAvailable": "アップデートをインストール",
+        "installing": "インストール中…",
+        "author": "Locution（開発：Derek Peterson）"
       },
       "appDataDirectory": {
         "title": "アプリデータディレクトリ",
@@ -680,7 +731,19 @@
     "modelLoadFailedUnknown": "不明なモデル",
     "pasteFailedTitle": "テキストの貼り付けに失敗しました",
     "pasteFailed": "アクティブなアプリケーションにテキストを貼り付けられませんでした。",
-    "transcriptionFailedTitle": "文字起こしに失敗しました"
+    "transcriptionFailedTitle": "文字起こしに失敗しました",
+    "recordingFailedGeneric": "録音を開始できませんでした。もう一度お試しください。",
+    "modelLoadFailedHint": "利用可能なモデルは「詳細」設定で確認してください。",
+    "transcriptionFailed": "音声認識に失敗しました。もう一度お試しください。",
+    "diagnostics": {
+      "ollamaUnreachableTitle": "クリーンアップが Ollama に接続できませんでした",
+      "ollamaUnreachableHint": "Ollama を起動するか、起動するまで設定でクリーンアップをオフにしてください。",
+      "modelMissing": "選択したクリーンアップモデルはまだインストールされていません。",
+      "whisperModelNotLoaded": "音声認識モデルの準備がまだできていません——少し待ってからお試しください。",
+      "accessibilityMissingTitle": "アクセシビリティのアクセスが必要です",
+      "accessibilityMissingHint": "システム設定でアクセシビリティのアクセスを許可するまで、Locution は他のアプリに入力できません。",
+      "postProcessFailed": "クリーンアップに失敗しました——元の口述内容が保持されました。"
+    }
   },
   "appLanguage": {
     "title": "アプリケーション言語",
@@ -697,6 +760,12 @@
       "settings": "Open settings",
       "expand": "Expand overlay",
       "collapse": "Collapse overlay"
+    },
+    "cleaned": "クリーンアップ済み",
+    "transcribed": "文字起こし済み",
+    "cleanupFailed": "クリーンアップ失敗",
+    "mode": {
+      "activeHint": "モード：{{name}}"
     }
   },
   "whatsNew": {

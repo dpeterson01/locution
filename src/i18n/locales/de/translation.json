@@ -15,9 +15,9 @@
     "advanced": "Erweitert",
     "postProcessing": "Nachbearbeitung",
     "history": "Verlauf",
-    "debug": "Debug",
     "about": "Info",
-    "experimental": "Experimental"
+    "experimental": "Experimental",
+    "diagnostics": "Diagnose"
   },
   "onboarding": {
     "subtitle": "Wähle ein Transkriptionsmodell, um loszulegen",
@@ -393,6 +393,15 @@
       "voiceActivityDetection": {
         "title": "Voice Activity Detection",
         "description": "Filter silence from recordings. Streaming-capable models use a longer VAD tail; disabling VAD records raw audio."
+      },
+      "snippets": {
+        "title": "Textbausteine",
+        "description": "Gesprochene Kurzbefehle, die sich zu festem Text erweitern — z. B. „meine E-Mail“ sagen, um deine Adresse einzufügen. Die Erweiterung erfolgt nach der KI-Bereinigung und wird daher genau wie geschrieben eingefügt.",
+        "triggerPlaceholder": "Auslöserphrase",
+        "expansionPlaceholder": "Erweiterungstext",
+        "add": "Hinzufügen",
+        "remove": "Textbaustein „{{trigger}}“ entfernen",
+        "duplicate": "Ein Textbaustein für „{{trigger}}“ existiert bereits"
       }
     },
     "postProcessing": {
@@ -474,25 +483,6 @@
         "cancel": "Abbrechen",
         "selectToEdit": "Wähle oben einen Prompt aus, um dessen Details anzuzeigen und zu bearbeiten.",
         "createFirst": "Klicke oben auf 'Neuen Prompt erstellen', um deinen ersten Nachbearbeitungs-Prompt zu erstellen.",
-        "model": {
-          "label": "Mode Model",
-          "description": "Preferred model for this mode. Type a model name to use one not yet listed, or leave empty to use the provider's configured model.",
-          "placeholder": "Search or type a model name",
-          "download": {
-            "button": "Download",
-            "checking": "Checking…",
-            "notRunning": "Ollama isn't running.",
-            "startOllama": "Start Ollama",
-            "starting": "Starting Ollama…",
-            "pulling": "Downloading… {{percentage}}%",
-            "interrupted": "Download was interrupted.",
-            "diskFull": "Not enough disk space.",
-            "noNetwork": "Couldn't reach the network.",
-            "retry": "Retry",
-            "unknownModel": "\"{{name}}\" isn't a model Ollama recognizes. Check the spelling, or find valid model names at <link>ollama.com/library</link>.",
-            "otherError": "Something went wrong pulling this model."
-          }
-        },
         "useContext": {
           "label": "Use screen context",
           "description": "Feed the active app, selected text, and clipboard into this mode's prompt.",
@@ -506,6 +496,46 @@
         "setUp": "Set up",
         "finish": "Finish setup",
         "dialogTitle": "Set up local cleanup"
+      },
+      "voice": {
+        "title": "Stimme",
+        "card": {
+          "toggle": {
+            "title": "Meine Stimme anwenden",
+            "description": "Fügt einen festen Schutz gegen KI-klingende Bereinigung hinzu (keine Gedankenstriche, keine Dreier-Füllung, kein „Ich hoffe, das hilft“) sowie deine eigene Stimmkarte unten, bei jedem Bereinigungsaufruf, der leistungsfähig genug ist, ihr zu folgen. Global und immer aktiv – gilt für die hochwertigeren Modi und wird bei den schnellen (z. B. Bereinigen) automatisch übersprungen, sodass dort kein sichtbarer Effekt zu erwarten ist."
+          },
+          "textLabel": "Meine Stimme",
+          "textPlaceholder": "Beschreibe, wie du tatsächlich schreibst – Satzlänge, Wortschatz, Gewohnheiten.",
+          "save": "Speichern",
+          "distill": {
+            "label": "Aus Schreibproben trainieren",
+            "description": "Füge 1 bis 5 kurze Proben deines eigenen Schreibens ein, getrennt durch eine Leerzeile. Dies läuft einmal beim Klick auf Destillieren, nie pro Diktat.",
+            "placeholder": "Füge hier eine Probe ein.\n\nTrenne mehrere Proben durch eine Leerzeile.",
+            "button": "In meine Stimmkarte destillieren",
+            "distilling": "Destilliere…",
+            "noSamples": "Füge zuerst mindestens eine Schreibprobe hinzu.",
+            "success": "Stimmkarte aus deinen Schreibproben aktualisiert."
+          }
+        }
+      },
+      "perApp": {
+        "title": "App-spezifischer Automatikmodus",
+        "toggle": {
+          "title": "Modus automatisch nach App wählen",
+          "description": "Standardmäßig aus. Ordne eine App einem Bereinigungsmodus zu. Wenn diese App im Vordergrund ist, wird ihr Modus automatisch angewendet und überschreibt die automatische Kurz/Lang-Auswahl – stets im Overlay angezeigt, nie stillschweigend. Ein manueller Moduswechsel übernimmt für den Rest der Sitzung."
+        },
+        "rules": {
+          "appNamePlaceholder": "App-Name (z. B. Slack)",
+          "lookup": {
+            "button": "Bundle-ID suchen",
+            "notFound": "Es wurde keine App namens „{{name}}“ gefunden. Prüfe die Schreibweise und stelle sicher, dass sie installiert ist.",
+            "unsupported": "Die Suche nach App-Namen ist nur unter macOS verfügbar. Gib stattdessen den Prozessnamen ein."
+          },
+          "bundleIdPlaceholder": "Bundle-ID (z. B. com.apple.mail)",
+          "modePlaceholder": "Modus auswählen",
+          "add": "Regel hinzufügen",
+          "remove": "Regel für {{bundleId}} entfernen"
+        }
       }
     },
     "history": {
@@ -521,7 +551,10 @@
       "retranscribe": "Erneut transkribieren",
       "retranscribeError": "Erneute Transkription fehlgeschlagen. Bitte versuche es erneut.",
       "transcribing": "Transkribiere...",
-      "transcriptionFailed": "Transkription fehlgeschlagen. Du kannst über das Wiederholen-Symbol erneut transkribieren."
+      "transcriptionFailed": "Transkription fehlgeschlagen. Du kannst über das Wiederholen-Symbol erneut transkribieren.",
+      "rawText": "Roh",
+      "cleanedText": "Bereinigt",
+      "cleanupFailed": "Bereinigung fehlgeschlagen"
     },
     "debug": {
       "title": "Debug",
@@ -610,13 +643,31 @@
         "button": "Vorschau",
         "noNotes": "Keine gebündelten Versionshinweise gefunden",
         "error": "Versionshinweise konnten nicht angezeigt werden"
+      },
+      "debugModeToggle": {
+        "label": "Debug-Modus",
+        "description": "Zeigt detaillierte Protokolle im Betrachter unten. Kann Dateipfade oder transkribierten Text enthalten."
+      },
+      "exportDiagnostics": {
+        "title": "Diagnose exportieren",
+        "description": "Speichert ein teilbares Paket mit jüngsten Fehlern und Einstellungen zur Fehlerbehebung. Enthält nie deinen diktierten Text oder Audio.",
+        "button": "Exportieren",
+        "exporting": "Exportiere…",
+        "success": "Diagnose exportiert.",
+        "failure": "Diagnose konnte nicht exportiert werden."
       }
     },
     "about": {
       "title": "Info",
       "version": {
         "title": "Version",
-        "description": "Aktuelle Version von Locution"
+        "description": "Aktuelle Version von Locution",
+        "checkForUpdates": "Nach Updates suchen",
+        "checking": "Suche…",
+        "upToDate": "Aktuell",
+        "updateAvailable": "Update installieren",
+        "installing": "Installiere…",
+        "author": "Locution von Derek Peterson"
       },
       "appDataDirectory": {
         "title": "App-Datenverzeichnis",
@@ -680,7 +731,19 @@
     "modelLoadFailedUnknown": "unbekanntes Modell",
     "pasteFailedTitle": "Text konnte nicht eingefügt werden",
     "pasteFailed": "Der Text konnte nicht in die aktive Anwendung eingefügt werden.",
-    "transcriptionFailedTitle": "Transkription fehlgeschlagen"
+    "transcriptionFailedTitle": "Transkription fehlgeschlagen",
+    "recordingFailedGeneric": "Aufnahme konnte nicht gestartet werden. Bitte versuche es erneut.",
+    "modelLoadFailedHint": "Verfügbare Modelle findest du in den erweiterten Einstellungen.",
+    "transcriptionFailed": "Spracherkennung fehlgeschlagen. Bitte versuche es erneut.",
+    "diagnostics": {
+      "ollamaUnreachableTitle": "Bereinigung konnte Ollama nicht erreichen",
+      "ollamaUnreachableHint": "Öffne Ollama oder schalte die Bereinigung in den Einstellungen aus, bis es läuft.",
+      "modelMissing": "Das ausgewählte Bereinigungsmodell ist noch nicht installiert.",
+      "whisperModelNotLoaded": "Das Sprache-zu-Text-Modell ist noch nicht bereit – versuche es gleich erneut.",
+      "accessibilityMissingTitle": "Bedienungshilfen-Zugriff erforderlich",
+      "accessibilityMissingHint": "Locution kann erst in andere Apps schreiben, wenn du in den Systemeinstellungen den Zugriff auf die Bedienungshilfen gewährst.",
+      "postProcessFailed": "Bereinigung fehlgeschlagen – dein ursprüngliches Diktat wurde beibehalten."
+    }
   },
   "appLanguage": {
     "title": "Anwendungssprache",
@@ -697,6 +760,12 @@
       "settings": "Open settings",
       "expand": "Expand overlay",
       "collapse": "Collapse overlay"
+    },
+    "cleaned": "Bereinigt",
+    "transcribed": "Transkribiert",
+    "cleanupFailed": "Bereinigung fehlgeschlagen",
+    "mode": {
+      "activeHint": "Modus: {{name}}"
     }
   },
   "whatsNew": {

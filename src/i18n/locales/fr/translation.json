@@ -15,9 +15,9 @@
     "advanced": "Avancé",
     "postProcessing": "Post-traitement",
     "history": "Historique",
-    "debug": "Débogage",
     "about": "À propos",
-    "experimental": "Experimental"
+    "experimental": "Experimental",
+    "diagnostics": "Diagnostics"
   },
   "onboarding": {
     "subtitle": "Pour commencer, choisissez un modèle de transcription",
@@ -393,6 +393,15 @@
       "voiceActivityDetection": {
         "title": "Voice Activity Detection",
         "description": "Filter silence from recordings. Streaming-capable models use a longer VAD tail; disabling VAD records raw audio."
+      },
+      "snippets": {
+        "title": "Extraits",
+        "description": "Raccourcis de phrases parlées qui se transforment en texte fixe — par ex. dites « mon e-mail » pour insérer votre adresse. L'expansion a lieu après le nettoyage par IA, elle est donc insérée exactement telle qu'écrite.",
+        "triggerPlaceholder": "Phrase déclencheur",
+        "expansionPlaceholder": "Texte d'expansion",
+        "add": "Ajouter",
+        "remove": "Supprimer l'extrait « {{trigger}} »",
+        "duplicate": "Un extrait pour « {{trigger}} » existe déjà"
       }
     },
     "postProcessing": {
@@ -474,25 +483,6 @@
         "cancel": "Annuler",
         "selectToEdit": "Sélectionnez un prompt ci-dessus pour voir et modifier ses détails.",
         "createFirst": "Cliquez sur 'Créer un nouveau prompt' ci-dessus pour créer votre premier prompt de post-traitement.",
-        "model": {
-          "label": "Mode Model",
-          "description": "Preferred model for this mode. Type a model name to use one not yet listed, or leave empty to use the provider's configured model.",
-          "placeholder": "Search or type a model name",
-          "download": {
-            "button": "Download",
-            "checking": "Checking…",
-            "notRunning": "Ollama isn't running.",
-            "startOllama": "Start Ollama",
-            "starting": "Starting Ollama…",
-            "pulling": "Downloading… {{percentage}}%",
-            "interrupted": "Download was interrupted.",
-            "diskFull": "Not enough disk space.",
-            "noNetwork": "Couldn't reach the network.",
-            "retry": "Retry",
-            "unknownModel": "\"{{name}}\" isn't a model Ollama recognizes. Check the spelling, or find valid model names at <link>ollama.com/library</link>.",
-            "otherError": "Something went wrong pulling this model."
-          }
-        },
         "useContext": {
           "label": "Use screen context",
           "description": "Feed the active app, selected text, and clipboard into this mode's prompt.",
@@ -506,6 +496,46 @@
         "setUp": "Set up",
         "finish": "Finish setup",
         "dialogTitle": "Set up local cleanup"
+      },
+      "voice": {
+        "title": "Voix",
+        "card": {
+          "toggle": {
+            "title": "Appliquer ma voix",
+            "description": "Ajoute un garde-fou fixe contre un nettoyage au ton d'IA (pas de tirets cadratins, pas de remplissage en groupes de trois, pas de « J'espère que cela vous aidera ») ainsi que votre propre carte de voix ci-dessous, à chaque appel de nettoyage assez capable de la suivre. Globale et toujours active : elle s'applique aux modes de meilleure qualité et est automatiquement ignorée sur les modes rapides (par ex. Nettoyer), sans effet visible attendu à cet endroit."
+          },
+          "textLabel": "Ma voix",
+          "textPlaceholder": "Décrivez comment vous écrivez réellement : longueur des phrases, vocabulaire, habitudes.",
+          "save": "Enregistrer",
+          "distill": {
+            "label": "Entraîner à partir d'échantillons d'écriture",
+            "description": "Collez 1 à 5 courts échantillons de votre propre écriture, séparés par une ligne vide. Cela s'exécute une fois lorsque vous cliquez sur Distiller, jamais à chaque dictée.",
+            "placeholder": "Collez un échantillon ici.\n\nSéparez plusieurs échantillons par une ligne vide.",
+            "button": "Distiller dans ma carte de voix",
+            "distilling": "Distillation…",
+            "noSamples": "Ajoutez d'abord au moins un échantillon d'écriture.",
+            "success": "Carte de voix mise à jour à partir de vos échantillons d'écriture."
+          }
+        }
+      },
+      "perApp": {
+        "title": "Mode automatique par application",
+        "toggle": {
+          "title": "Sélectionner le mode selon l'application",
+          "description": "Désactivé par défaut. Associez une application à un mode de nettoyage. Lorsque cette application est au premier plan, son mode est appliqué automatiquement et remplace la sélection automatique court/long — toujours affiché dans la superposition, jamais en silence. Un changement de mode manuel prend le relais pour le reste de la session."
+        },
+        "rules": {
+          "appNamePlaceholder": "Nom de l'application (par ex. Slack)",
+          "lookup": {
+            "button": "Trouver l'ID de bundle",
+            "notFound": "Impossible de trouver une application nommée « {{name}} ». Vérifiez l'orthographe et assurez-vous qu'elle est installée.",
+            "unsupported": "La recherche par nom d'application n'est disponible que sur macOS. Saisissez plutôt le nom du processus."
+          },
+          "bundleIdPlaceholder": "ID de bundle (par ex. com.apple.mail)",
+          "modePlaceholder": "Sélectionnez un mode",
+          "add": "Ajouter une règle",
+          "remove": "Supprimer la règle pour {{bundleId}}"
+        }
       }
     },
     "history": {
@@ -521,7 +551,10 @@
       "retranscribe": "Re-transcrire",
       "retranscribeError": "Impossible de re-transcrire. Veuillez réessayer.",
       "transcribing": "Transcription en cours...",
-      "transcriptionFailed": "La transcription a échoué. Vous pouvez re-transcrire en utilisant l'icône de réessai."
+      "transcriptionFailed": "La transcription a échoué. Vous pouvez re-transcrire en utilisant l'icône de réessai.",
+      "rawText": "Brut",
+      "cleanedText": "Nettoyé",
+      "cleanupFailed": "Échec du nettoyage"
     },
     "debug": {
       "title": "Débogage",
@@ -610,13 +643,31 @@
         "button": "Aperçu",
         "noNotes": "Aucune note de version intégrée trouvée",
         "error": "Impossible d’afficher l’aperçu des notes de version"
+      },
+      "debugModeToggle": {
+        "label": "Mode débogage",
+        "description": "Affiche des journaux détaillés dans la visionneuse ci-dessous. Peut inclure des chemins de fichiers ou du texte transcrit."
+      },
+      "exportDiagnostics": {
+        "title": "Exporter les diagnostics",
+        "description": "Enregistre un paquet partageable des échecs récents et des réglages pour le dépannage. N'inclut jamais votre texte dicté ni l'audio.",
+        "button": "Exporter",
+        "exporting": "Exportation…",
+        "success": "Diagnostics exportés.",
+        "failure": "Échec de l'exportation des diagnostics."
       }
     },
     "about": {
       "title": "À propos",
       "version": {
         "title": "Version",
-        "description": "Version actuelle de Locution"
+        "description": "Version actuelle de Locution",
+        "checkForUpdates": "Rechercher des mises à jour",
+        "checking": "Vérification…",
+        "upToDate": "À jour",
+        "updateAvailable": "Installer la mise à jour",
+        "installing": "Installation…",
+        "author": "Locution par Derek Peterson"
       },
       "appDataDirectory": {
         "title": "Emplacement des données de l'application",
@@ -680,7 +731,19 @@
     "modelLoadFailedUnknown": "modèle inconnu",
     "pasteFailedTitle": "Échec du collage du texte",
     "pasteFailed": "Le texte n'a pas pu être collé dans l'application active.",
-    "transcriptionFailedTitle": "Échec de la transcription"
+    "transcriptionFailedTitle": "Échec de la transcription",
+    "recordingFailedGeneric": "Échec du démarrage de l'enregistrement. Veuillez réessayer.",
+    "modelLoadFailedHint": "Consultez les modèles disponibles dans les réglages Avancés.",
+    "transcriptionFailed": "La reconnaissance vocale a échoué. Veuillez réessayer.",
+    "diagnostics": {
+      "ollamaUnreachableTitle": "Le nettoyage n'a pas pu joindre Ollama",
+      "ollamaUnreachableHint": "Ouvrez Ollama, ou désactivez le nettoyage dans les Réglages jusqu'à ce qu'il soit lancé.",
+      "modelMissing": "Le modèle de nettoyage sélectionné n'est pas encore installé.",
+      "whisperModelNotLoaded": "Le modèle de reconnaissance vocale n'est pas encore prêt ; réessayez dans un instant.",
+      "accessibilityMissingTitle": "Accès à l'Accessibilité requis",
+      "accessibilityMissingHint": "Locution ne peut pas écrire dans d'autres applications tant que vous n'accordez pas l'accès à l'Accessibilité dans les Réglages Système.",
+      "postProcessFailed": "Le nettoyage a échoué ; votre dictée d'origine a été conservée."
+    }
   },
   "appLanguage": {
     "title": "Langue de l'application",
@@ -697,6 +760,12 @@
       "settings": "Open settings",
       "expand": "Expand overlay",
       "collapse": "Collapse overlay"
+    },
+    "cleaned": "Nettoyé",
+    "transcribed": "Transcrit",
+    "cleanupFailed": "Échec du nettoyage",
+    "mode": {
+      "activeHint": "Mode : {{name}}"
     }
   },
   "whatsNew": {
