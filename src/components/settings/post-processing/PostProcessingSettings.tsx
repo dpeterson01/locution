@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Download, Loader2, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 import { commands } from "@/bindings";
-import { useOllamaModelPull } from "../../../hooks/useOllamaModelPull";
 
 import {
   Dropdown,
@@ -139,56 +138,15 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, isUpdating, refreshSettings } =
     useSettings();
-  const providerState = usePostProcessProviderState();
   const [isCreating, setIsCreating] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [draftText, setDraftText] = useState("");
-  const [draftModel, setDraftModel] = useState("");
   const [draftUseContext, setDraftUseContext] = useState(false);
-
-  // Locally-pulled Ollama models, for the inline "Download" affordance on
-  // the model field below. Probed once on mount ("check on next visit," not
-  // a poller) and updated optimistically after a successful download —
-  // useOllamaModelPull's own internal probe is authoritative for the actual
-  // pull decision, so staleness here only affects whether the button shows.
-  const [modelsPresent, setModelsPresent] = useState<string[]>([]);
-  const modelDownload = useOllamaModelPull();
-  // Which model name the current modelDownload session was started for, so
-  // stale progress/error state doesn't render against a different typed name.
-  const pullingModelRef = useRef<string>("");
-
-  useEffect(() => {
-    commands.probeOllamaSetup().then((result) => {
-      setModelsPresent(result.models_present);
-    });
-  }, []);
-
-  // Intentionally keyed on the download's own status only, not draftModel —
-  // this fires once when a pull resolves, not on every keystroke.
-  useEffect(() => {
-    if (modelDownload.state.status === "present") {
-      setModelsPresent((prev) =>
-        prev.includes(draftModel.trim()) ? prev : [...prev, draftModel.trim()],
-      );
-    }
-  }, [modelDownload.state.status]);
 
   const prompts = getSetting("post_process_prompts") || [];
   const selectedPromptId = getSetting("post_process_selected_prompt_id") || "";
   const selectedPrompt =
     prompts.find((prompt) => prompt.id === selectedPromptId) || null;
-
-  // Model options for the per-mode model picker: the provider's fetched list
-  // plus whatever the draft currently holds, so the current value always shows.
-  const modeModelOptions = useMemo(() => {
-    const seen = new Set(providerState.modelOptions.map((o) => o.value));
-    const options = [...providerState.modelOptions];
-    const trimmed = draftModel.trim();
-    if (trimmed && !seen.has(trimmed)) {
-      options.push({ value: trimmed, label: trimmed });
-    }
-    return options;
-  }, [providerState.modelOptions, draftModel]);
 
   useEffect(() => {
     if (isCreating) return;
@@ -196,12 +154,10 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     if (selectedPrompt) {
       setDraftName(selectedPrompt.name);
       setDraftText(selectedPrompt.prompt);
-      setDraftModel(selectedPrompt.model ?? "");
       setDraftUseContext(selectedPrompt.use_context ?? false);
     } else {
       setDraftName("");
       setDraftText("");
-      setDraftModel("");
       setDraftUseContext(false);
     }
   }, [
@@ -209,7 +165,6 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     selectedPromptId,
     selectedPrompt?.name,
     selectedPrompt?.prompt,
-    selectedPrompt?.model,
     selectedPrompt?.use_context,
   ]);
 
@@ -226,7 +181,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
       const result = await commands.addPostProcessPrompt(
         draftName.trim(),
         draftText.trim(),
-        draftModel.trim() || null,
+        null,
         draftUseContext,
       );
       if (result.status === "ok") {
@@ -247,7 +202,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
         selectedPromptId,
         draftName.trim(),
         draftText.trim(),
-        draftModel.trim() || null,
+        null,
         draftUseContext,
       );
       await refreshSettings();
@@ -273,12 +228,10 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     if (selectedPrompt) {
       setDraftName(selectedPrompt.name);
       setDraftText(selectedPrompt.prompt);
-      setDraftModel(selectedPrompt.model ?? "");
       setDraftUseContext(selectedPrompt.use_context ?? false);
     } else {
       setDraftName("");
       setDraftText("");
-      setDraftModel("");
       setDraftUseContext(false);
     }
   };
@@ -287,7 +240,6 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     setIsCreating(true);
     setDraftName("");
     setDraftText("");
-    setDraftModel("");
     setDraftUseContext(false);
   };
 
@@ -296,167 +248,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     !!selectedPrompt &&
     (draftName.trim() !== selectedPrompt.name ||
       draftText.trim() !== selectedPrompt.prompt.trim() ||
-      draftModel.trim() !== (selectedPrompt.model ?? "") ||
       draftUseContext !== (selectedPrompt.use_context ?? false));
-
-  const trimmedDraftModel = draftModel.trim();
-  const draftModelPresent =
-    trimmedDraftModel === "" || modelsPresent.includes(trimmedDraftModel);
-  // Only render the download hook's state against the model it was actually
-  // started for — if the user edits the field to something else mid-pull,
-  // show a plain idle "Download" for the new text instead of stale progress.
-  const downloadIsForCurrentDraft =
-    pullingModelRef.current === trimmedDraftModel;
-  const downloadState = downloadIsForCurrentDraft
-    ? modelDownload.state
-    : { status: "idle" as const };
-  const modelUpdateBlocked =
-    downloadIsForCurrentDraft &&
-    ["checking", "starting", "pulling"].includes(modelDownload.state.status);
-
-  const handleStartDownload = () => {
-    pullingModelRef.current = trimmedDraftModel;
-    modelDownload.startDownload(trimmedDraftModel);
-  };
-  const handleStartOllamaThenDownload = () => {
-    pullingModelRef.current = trimmedDraftModel;
-    modelDownload.startOllamaThenDownload(trimmedDraftModel);
-  };
-  const handleRetryDownload = () => {
-    pullingModelRef.current = trimmedDraftModel;
-    modelDownload.retry(trimmedDraftModel);
-  };
-
-  // Shared per-mode model picker (edit + create forms).
-  const modeModelField = (
-    <div className="space-y-2 flex flex-col">
-      <label className="text-sm font-semibold">
-        {t("settings.postProcessing.prompts.model.label")}
-      </label>
-      <ModelSelect
-        value={draftModel}
-        options={modeModelOptions}
-        isLoading={providerState.isFetchingModels}
-        placeholder={t("settings.postProcessing.prompts.model.placeholder")}
-        onSelect={(value) => setDraftModel(value)}
-        onCreate={(value) => setDraftModel(value)}
-        onBlur={() => {}}
-        className="flex-1 min-w-0"
-      />
-      <p className="text-xs text-mid-gray/70">
-        {t("settings.postProcessing.prompts.model.description")}
-      </p>
-
-      {!draftModelPresent && downloadState.status === "idle" && (
-        <Button
-          onClick={handleStartDownload}
-          variant="secondary"
-          size="sm"
-          className="self-start"
-        >
-          <Download className="w-3.5 h-3.5 mr-1.5" />
-          {t("settings.postProcessing.prompts.model.download.button")}
-        </Button>
-      )}
-
-      {downloadState.status === "checking" && (
-        <div className="flex items-center gap-2 text-xs text-mid-gray/70">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          {t("settings.postProcessing.prompts.model.download.checking")}
-        </div>
-      )}
-
-      {downloadState.status === "not_running" && (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-mid-gray/70">
-            {t("settings.postProcessing.prompts.model.download.notRunning")}
-          </p>
-          <Button
-            onClick={handleStartOllamaThenDownload}
-            variant="secondary"
-            size="sm"
-            className="self-start"
-          >
-            {t("settings.postProcessing.prompts.model.download.startOllama")}
-          </Button>
-        </div>
-      )}
-
-      {downloadState.status === "starting" && (
-        <div className="flex items-center gap-2 text-xs text-mid-gray/70">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          {t("settings.postProcessing.prompts.model.download.starting")}
-        </div>
-      )}
-
-      {downloadState.status === "pulling" && (
-        <div className="flex flex-col gap-1">
-          <div className="w-full h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-logo-primary rounded-full transition-all duration-300"
-              style={{ width: `${downloadState.percentage ?? 0}%` }}
-            />
-          </div>
-          <p className="text-xs text-mid-gray/70">
-            {t("settings.postProcessing.prompts.model.download.pulling", {
-              percentage: downloadState.percentage ?? 0,
-            })}
-          </p>
-        </div>
-      )}
-
-      {(downloadState.status === "interrupted" ||
-        downloadState.status === "disk_full" ||
-        downloadState.status === "no_network") && (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-mid-gray/70">
-            {t(
-              `settings.postProcessing.prompts.model.download.${
-                downloadState.status === "interrupted"
-                  ? "interrupted"
-                  : downloadState.status === "disk_full"
-                    ? "diskFull"
-                    : "noNetwork"
-              }`,
-            )}
-          </p>
-          <Button
-            onClick={handleRetryDownload}
-            variant="secondary"
-            size="sm"
-            className="self-start"
-          >
-            {t("settings.postProcessing.prompts.model.download.retry")}
-          </Button>
-        </div>
-      )}
-
-      {downloadState.status === "unknown_model" && (
-        <p className="text-xs text-red-400">
-          <Trans
-            i18nKey="settings.postProcessing.prompts.model.download.unknownModel"
-            values={{ name: trimmedDraftModel }}
-            components={{
-              link: (
-                <a
-                  href="https://ollama.com/library"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline"
-                />
-              ),
-            }}
-          />
-        </p>
-      )}
-
-      {downloadState.status === "other_error" && (
-        <p className="text-xs text-red-400">
-          {t("settings.postProcessing.prompts.model.download.otherError")}
-        </p>
-      )}
-    </div>
-  );
 
   const contextGloballyEnabled = getSetting("context_capture_enabled") ?? false;
 
@@ -559,8 +351,6 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
               </p>
             </div>
 
-            {modeModelField}
-
             {modeUseContextField}
 
             <div className="flex gap-2 pt-2">
@@ -568,12 +358,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
                 onClick={handleUpdatePrompt}
                 variant="primary"
                 size="md"
-                disabled={
-                  !draftName.trim() ||
-                  !draftText.trim() ||
-                  !isDirty ||
-                  modelUpdateBlocked
-                }
+                disabled={!draftName.trim() || !draftText.trim() || !isDirty}
               >
                 {t("settings.postProcessing.prompts.updatePrompt")}
               </Button>
@@ -640,8 +425,6 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
               </p>
             </div>
 
-            {modeModelField}
-
             {modeUseContextField}
 
             <div className="flex gap-2 pt-2">
@@ -649,9 +432,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
                 onClick={handleCreatePrompt}
                 variant="primary"
                 size="md"
-                disabled={
-                  !draftName.trim() || !draftText.trim() || modelUpdateBlocked
-                }
+                disabled={!draftName.trim() || !draftText.trim()}
               >
                 {t("settings.postProcessing.prompts.createPrompt")}
               </Button>
