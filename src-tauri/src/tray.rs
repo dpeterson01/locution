@@ -328,6 +328,11 @@ mod tests {
             post_processed_text: post_processed.map(|text| text.to_string()),
             post_process_prompt: None,
             post_process_requested: false,
+            cleanup_mode_id: None,
+            cleanup_mode_name: None,
+            cleanup_model: None,
+            cleanup_tier: None,
+            cleanup_error: None,
         }
     }
 
