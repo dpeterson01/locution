@@ -102,7 +102,7 @@ fn is_blank_transcription(transcription: &str) -> bool {
 
 /// Length-based routing tier for adaptive cleanup (Ollama/custom provider only).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CleanupTier {
+pub(crate) enum CleanupTier {
     /// Below `skip_llm_under_chars`: skip the LLM entirely; the built-in
     /// punctuation/filler filters already ran upstream.
     SkipLlm,
@@ -110,6 +110,63 @@ enum CleanupTier {
     Short,
     /// Above the threshold: thorough model with the polishing overlay.
     Long,
+}
+
+/// Metadata about the cleanup mode that actually ran, surfaced to the overlay
+/// terminal state and the history badge (mode name · tier · model).
+#[derive(Debug, Clone)]
+pub(crate) struct CleanupModeInfo {
+    pub id: String,
+    pub name: String,
+    pub model: String,
+    pub tier: Option<CleanupTier>,
+}
+
+/// Outcome of [`post_process_transcription`]. Replaces a bare `Option<String>`
+/// so callers can tell apart a real cleanup (with mode metadata) from a
+/// deliberate skip (blank input, no provider, SkipLlm tier, empty response)
+/// and a hard failure (the LLM errored — raw transcript is kept).
+pub(crate) enum CleanupOutcome {
+    Cleaned {
+        text: String,
+        mode_id: String,
+        mode_name: String,
+        model: String,
+        tier: Option<CleanupTier>,
+    },
+    Skipped,
+    Failed(FailureCategory),
+}
+
+/// Serialize a [`CleanupTier`] for history persistence. Kept in sync with the
+/// history UI's tier label mapping.
+pub(crate) fn cleanup_tier_key(tier: CleanupTier) -> &'static str {
+    match tier {
+        CleanupTier::SkipLlm => "skip_llm",
+        CleanupTier::Short => "short",
+        CleanupTier::Long => "long",
+    }
+}
+
+/// Stable string key for a cleanup [`FailureCategory`], matching the frontend
+/// `categoryKey` in App.tsx so the history UI can reuse the diagnostic i18n
+/// strings.
+pub(crate) fn cleanup_failure_key(category: &FailureCategory) -> String {
+    match category {
+        FailureCategory::PostProcessHttpError { status_category } => {
+            let sc = match status_category {
+                HttpStatusCategory::ClientError => "client_error",
+                HttpStatusCategory::ServerError => "server_error",
+                HttpStatusCategory::Unreachable => "unreachable",
+                HttpStatusCategory::Timeout => "timeout",
+            };
+            format!("post_process_http_error:{sc}")
+        }
+        other => serde_json::to_string(other)
+            .unwrap_or_default()
+            .trim_matches('"')
+            .to_string(),
+    }
 }
 
 /// True when the currently selected cleanup mode opted into screen context.
@@ -204,17 +261,17 @@ async fn post_process_transcription(
     settings: &AppSettings,
     transcription: &str,
     context: Option<&crate::context_capture::ContextSnapshot>,
-) -> Option<String> {
+) -> CleanupOutcome {
     if is_blank_transcription(transcription) {
         debug!("Post-processing skipped because the transcription is empty");
-        return None;
+        return CleanupOutcome::Skipped;
     }
 
     let provider = match settings.active_post_process_provider().cloned() {
         Some(provider) => provider,
         None => {
             debug!("Post-processing enabled but no provider is selected");
-            return None;
+            return CleanupOutcome::Skipped;
         }
     };
 
@@ -224,14 +281,14 @@ async fn post_process_transcription(
             "Adaptive cleanup: tier=SkipLlm chars={} — skipping LLM, using raw transcript",
             transcription.chars().count()
         );
-        return None;
+        return CleanupOutcome::Skipped;
     }
 
     let selected_prompt_id = match &settings.post_process_selected_prompt_id {
         Some(id) => id.clone(),
         None => {
             debug!("Post-processing skipped because no prompt is selected");
-            return None;
+            return CleanupOutcome::Skipped;
         }
     };
 
@@ -246,9 +303,11 @@ async fn post_process_transcription(
                 "Post-processing skipped because prompt '{}' was not found",
                 selected_prompt_id
             );
-            return None;
+            return CleanupOutcome::Skipped;
         }
     };
+    let mode_id = selected_prompt_id.clone();
+    let mode_name = selected_mode.name.clone();
     let mut prompt = selected_mode.prompt.clone();
 
     // Model selection: the mode's pinned model wins. Otherwise fall back to
@@ -309,7 +368,7 @@ async fn post_process_transcription(
             "Post-processing skipped because provider '{}' has no model configured",
             provider.id
         );
-        return None;
+        return CleanupOutcome::Skipped;
     }
 
     if let Some(tier) = tier {
@@ -324,7 +383,7 @@ async fn post_process_transcription(
 
     if prompt.trim().is_empty() {
         debug!("Post-processing skipped because the selected prompt is empty");
-        return None;
+        return CleanupOutcome::Skipped;
     }
 
     // Prelude blocks stacked above the prompt template: style guidance (Phase
@@ -458,10 +517,22 @@ async fn post_process_transcription(
                                 provider.id,
                                 result.len()
                             );
-                            return Some(result);
+                            return CleanupOutcome::Cleaned {
+                                text: result,
+                                mode_id: mode_id.clone(),
+                                mode_name: mode_name.clone(),
+                                model: model.clone(),
+                                tier,
+                            };
                         } else {
                             error!("Structured output response missing 'transcription' field");
-                            return Some(strip_invisible_chars(&content));
+                            return CleanupOutcome::Cleaned {
+                                text: strip_invisible_chars(&content),
+                                mode_id: mode_id.clone(),
+                                mode_name: mode_name.clone(),
+                                model: model.clone(),
+                                tier,
+                            };
                         }
                     }
                     Err(e) => {
@@ -469,13 +540,19 @@ async fn post_process_transcription(
                             "Failed to parse structured output JSON: {}. Returning raw content.",
                             e
                         );
-                        return Some(strip_invisible_chars(&content));
+                        return CleanupOutcome::Cleaned {
+                            text: strip_invisible_chars(&content),
+                            mode_id: mode_id.clone(),
+                            mode_name: mode_name.clone(),
+                            model: model.clone(),
+                            tier,
+                        };
                     }
                 }
             }
             Ok(None) => {
                 error!("LLM API response has no content");
-                return None;
+                return CleanupOutcome::Skipped;
             }
             Err(e) => {
                 warn!(
@@ -509,11 +586,17 @@ async fn post_process_transcription(
                 provider.id,
                 content.len()
             );
-            Some(content)
+            CleanupOutcome::Cleaned {
+                text: content,
+                mode_id,
+                mode_name,
+                model,
+                tier,
+            }
         }
         Ok(None) => {
             error!("LLM API response has no content");
-            None
+            CleanupOutcome::Skipped
         }
         Err(e) => {
             error!(
@@ -521,8 +604,9 @@ async fn post_process_transcription(
                 provider.id,
                 e
             );
-            diagnostics::record_failure(app, categorize_llm_error(&provider.id, e));
-            None
+            let category = categorize_llm_error(&provider.id, e);
+            diagnostics::record_failure(app, category);
+            CleanupOutcome::Failed(category)
         }
     }
 }
@@ -579,6 +663,30 @@ pub(crate) struct ProcessedTranscription {
     pub final_text: String,
     pub post_processed_text: Option<String>,
     pub post_process_prompt: Option<String>,
+    /// The cleanup mode that ran (mode name · tier · model), when cleanup
+    /// actually succeeded. `None` when cleanup was skipped or failed.
+    pub cleanup_mode: Option<CleanupModeInfo>,
+    /// The failure category when cleanup was requested but the LLM errored —
+    /// the raw transcript is kept and pasted. `None` otherwise.
+    pub cleanup_failure: Option<FailureCategory>,
+}
+
+impl ProcessedTranscription {
+    /// Build the history cleanup columns (mode name/model/tier on success, or
+    /// the failure category key) from this outcome.
+    pub(crate) fn cleanup_record(&self) -> crate::managers::history::CleanupRecord {
+        crate::managers::history::CleanupRecord {
+            mode_id: self.cleanup_mode.as_ref().map(|m| m.id.clone()),
+            mode_name: self.cleanup_mode.as_ref().map(|m| m.name.clone()),
+            model: self.cleanup_mode.as_ref().map(|m| m.model.clone()),
+            tier: self
+                .cleanup_mode
+                .as_ref()
+                .and_then(|m| m.tier)
+                .map(|t| cleanup_tier_key(t).to_string()),
+            error: self.cleanup_failure.as_ref().map(cleanup_failure_key),
+        }
+    }
 }
 
 /// Resolve the persisted language *intent* into the language the currently-loaded
@@ -612,6 +720,8 @@ pub(crate) async fn process_transcription_output(
     let mut final_text = transcription.to_string();
     let mut post_processed_text: Option<String> = None;
     let mut post_process_prompt: Option<String> = None;
+    let mut cleanup_mode: Option<CleanupModeInfo> = None;
+    let mut cleanup_failure: Option<FailureCategory> = None;
 
     // Resolve the language the transcription actually ran in (the persisted
     // intent coerced against the loaded model's capabilities) so OpenCC keys off
@@ -624,20 +734,36 @@ pub(crate) async fn process_transcription_output(
     }
 
     if post_process {
-        if let Some(processed_text) =
-            post_process_transcription(app, &settings, &final_text, context).await
-        {
-            post_processed_text = Some(processed_text.clone());
-            final_text = processed_text;
+        match post_process_transcription(app, &settings, &final_text, context).await {
+            CleanupOutcome::Cleaned {
+                text,
+                mode_id,
+                mode_name,
+                model,
+                tier,
+            } => {
+                post_processed_text = Some(text.clone());
+                final_text = text;
+                cleanup_mode = Some(CleanupModeInfo {
+                    id: mode_id,
+                    name: mode_name,
+                    model,
+                    tier,
+                });
 
-            if let Some(prompt_id) = &settings.post_process_selected_prompt_id {
-                if let Some(prompt) = settings
-                    .post_process_prompts
-                    .iter()
-                    .find(|prompt| &prompt.id == prompt_id)
-                {
-                    post_process_prompt = Some(prompt.prompt.clone());
+                if let Some(prompt_id) = &settings.post_process_selected_prompt_id {
+                    if let Some(prompt) = settings
+                        .post_process_prompts
+                        .iter()
+                        .find(|prompt| &prompt.id == prompt_id)
+                    {
+                        post_process_prompt = Some(prompt.prompt.clone());
+                    }
                 }
+            }
+            CleanupOutcome::Skipped => {}
+            CleanupOutcome::Failed(category) => {
+                cleanup_failure = Some(category);
             }
         }
     } else if final_text != transcription {
@@ -662,6 +788,8 @@ pub(crate) async fn process_transcription_output(
         final_text,
         post_processed_text,
         post_process_prompt,
+        cleanup_mode,
+        cleanup_failure,
     }
 }
 
@@ -994,12 +1122,14 @@ impl ShortcutAction for TranscribeAction {
 
                             // Save to history if WAV was saved
                             if wav_saved {
+                                let cleanup = processed.cleanup_record();
                                 if let Err(err) = hm.save_entry(
                                     file_name,
                                     transcription,
                                     post_process,
                                     processed.post_processed_text.clone(),
                                     processed.post_process_prompt.clone(),
+                                    cleanup,
                                 ) {
                                     error!("Failed to save history entry: {}", err);
                                 }
@@ -1087,6 +1217,7 @@ impl ShortcutAction for TranscribeAction {
                                     post_process,
                                     None,
                                     None,
+                                    crate::managers::history::CleanupRecord::default(),
                                 ) {
                                     error!("Failed to save failed history entry: {}", save_err);
                                 }

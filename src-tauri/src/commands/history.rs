@@ -97,12 +97,14 @@ pub async fn retry_history_entry_transcription(
     let processed =
         process_transcription_output(&app, &transcription, entry.post_process_requested, None)
             .await;
+    let cleanup = processed.cleanup_record();
     history_manager
         .update_transcription(
             id,
             transcription,
             processed.post_processed_text,
             processed.post_process_prompt,
+            cleanup,
         )
         .map(|_| ())
         .map_err(|e| e.to_string())
