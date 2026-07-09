@@ -405,9 +405,6 @@
           "title": "プロバイダー",
           "description": "OpenAI互換のプロバイダーを選択。"
         },
-        "appleIntelligence": {
-          "unavailable": "このデバイスではApple Intelligenceを利用できません。macOS Tahoe（26.0）以降を実行し、システム設定でApple Intelligenceが有効になっているApple Silicon Macが必要です。"
-        },
         "baseUrl": {
           "title": "ベースURL",
           "description": "選択したプロバイダーのAPIベースURL。カスタムプロバイダーのみ編集可能。",

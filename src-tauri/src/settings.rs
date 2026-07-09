@@ -7,9 +7,6 @@ use std::fmt;
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
-pub const APPLE_INTELLIGENCE_PROVIDER_ID: &str = "apple_intelligence";
-pub const APPLE_INTELLIGENCE_DEFAULT_MODEL_ID: &str = "Apple Intelligence";
-
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
@@ -764,10 +761,7 @@ fn default_post_process_api_keys() -> SecretMap {
     SecretMap(map)
 }
 
-fn default_model_for_provider(provider_id: &str) -> String {
-    if provider_id == APPLE_INTELLIGENCE_PROVIDER_ID {
-        return APPLE_INTELLIGENCE_DEFAULT_MODEL_ID.to_string();
-    }
+fn default_model_for_provider(_provider_id: &str) -> String {
     String::new()
 }
 
@@ -859,6 +853,24 @@ fn default_typing_tool() -> TypingTool {
 
 fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
     let mut changed = false;
+
+    // Retire the delisted Apple Intelligence provider from existing stores: it
+    // was removed from the default list and is no longer functional (the SDK is
+    // not linked). Drop it from the persisted providers, keys, and models, and
+    // move the selection to the default provider if it was pointed at it.
+    let before = settings.post_process_providers.len();
+    settings
+        .post_process_providers
+        .retain(|p| p.id != "apple_intelligence");
+    if settings.post_process_providers.len() != before {
+        settings.post_process_api_keys.0.remove("apple_intelligence");
+        settings.post_process_models.remove("apple_intelligence");
+        if settings.post_process_provider_id == "apple_intelligence" {
+            settings.post_process_provider_id = default_post_process_provider_id();
+        }
+        changed = true;
+    }
+
     for provider in default_post_process_providers() {
         // Use match to do a single lookup - either sync existing or add new
         match settings

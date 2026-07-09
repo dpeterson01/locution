@@ -405,9 +405,6 @@
           "title": "Provedor",
           "description": "Selecione um provedor compatível com OpenAI."
         },
-        "appleIntelligence": {
-          "unavailable": "Apple Intelligence não está disponível neste dispositivo. Requer um Mac Apple Silicon executando macOS Tahoe (26.0) ou posterior com Apple Intelligence habilitado nas Configurações do Sistema."
-        },
         "baseUrl": {
           "title": "URL Base",
           "description": "URL base da API para o provedor selecionado. Apenas o provedor personalizado pode ser editado.",

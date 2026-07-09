@@ -1,6 +1,4 @@
 mod actions;
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-mod apple_intelligence;
 mod audio_feedback;
 pub mod audio_toolkit;
 mod catalog;
@@ -648,7 +646,6 @@ pub fn run(cli_args: CliArgs) {
             commands::open_log_dir,
             commands::open_app_data_dir,
             commands::diagnostics::export_diagnostics,
-            commands::check_apple_intelligence_available,
             commands::probe_ollama_setup,
             commands::install_and_start_ollama,
             commands::pull_ollama_model,

@@ -113,21 +113,6 @@ pub fn open_app_data_dir(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Check if Apple Intelligence is available on this device.
-/// Called by the frontend when the user selects Apple Intelligence provider.
-#[specta::specta]
-#[tauri::command]
-pub fn check_apple_intelligence_available() -> bool {
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    {
-        crate::apple_intelligence::check_apple_intelligence_availability()
-    }
-    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-    {
-        false
-    }
-}
-
 /// Probe current Ollama install/service/model state. Called on the setup
 /// wizard's mount and each time the post-processing Settings section mounts
 /// (deliberately not a background poller — see `ollama_setup` module docs).

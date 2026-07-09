@@ -707,13 +707,6 @@ async exportDiagnostics(destPath: string) : Promise<Result<null, string>> {
 }
 },
 /**
- * Check if Apple Intelligence is available on this device.
- * Called by the frontend when the user selects Apple Intelligence provider.
- */
-async checkAppleIntelligenceAvailable() : Promise<boolean> {
-    return await TAURI_INVOKE("check_apple_intelligence_available");
-},
-/**
  * Probe current Ollama install/service/model state. Called on the setup
  * wizard's mount and each time the post-processing Settings section mounts
  * (deliberately not a background poller — see `ollama_setup` module docs).

@@ -405,9 +405,6 @@
           "title": "Провайдер",
           "description": "Оберіть OpenAI-сумісного провайдера"
         },
-        "appleIntelligence": {
-          "unavailable": "Apple Intelligence недоступний на цьому пристрої. Потрібен Mac з Apple Silicon під управлінням macOS Tahoe (26.0) або новіше з увімкненим Apple Intelligence в Системних налаштуваннях."
-        },
         "baseUrl": {
           "title": "Базова URL-адреса",
           "description": "Базова URL-адреса API для обраного провайдера. Лише власний провайдер можна редагувати.",
