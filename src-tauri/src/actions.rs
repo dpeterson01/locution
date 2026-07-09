@@ -72,9 +72,20 @@ pub trait ShortcutAction: Send + Sync {
     fn stop(&self, app: &AppHandle, binding_id: &str, shortcut_str: &str);
 }
 
+/// How a [`TranscribeAction`] decides whether to run cleanup. The single
+/// dictation hotkey resolves this from the `post_process_enabled` toggle at stop
+/// time (`FromSettings`); an explicit always-clean binding forces it (`Force`).
+#[derive(Clone, Copy)]
+enum PostProcessMode {
+    /// Read `settings.post_process_enabled` when the recording stops.
+    FromSettings,
+    /// Ignore the toggle and use this fixed value.
+    Force(bool),
+}
+
 // Transcribe Action
 struct TranscribeAction {
-    post_process: bool,
+    post_process: PostProcessMode,
 }
 
 /// Field name for structured output JSON schema
@@ -565,15 +576,55 @@ async fn post_process_transcription(
         }
     }
 
-    // Legacy mode: Replace ${output} variable in the prompt with the actual text
-    let processed_prompt = prompt.replace("${output}", transcription);
-    debug!("Processed prompt length: {} chars", processed_prompt.len());
+    // Legacy mode: send prompt to the model.
+    //
+    // For the local Ollama provider (custom), split into a system message
+    // (instructions) and a separate user message (the transcription). Small local
+    // models — e.g. phi4-mini — echo the instruction text back when it shares the
+    // same message as the transcript, producing garbage output. Separating them,
+    // and appending an explicit plain-prose constraint, fixes this.
+    //
+    // For other providers (anthropic, groq) keep the classic single-message
+    // format: those services use larger models that do not have the echo problem,
+    // and their behaviour with a combined message is already well-tested.
+    let (legacy_user_content, legacy_system) = if provider.id == "custom" {
+        // Strip ${output} and the trailing label line that introduced it (e.g.
+        // "Input text to clean:"). The system message needs to be instructions
+        // only; adding a dangling label or an extra constraint in the user message
+        // confuses small models like phi4-mini, causing them to echo back the
+        // instructions or explain why they are leaving the response empty.
+        let instructions = {
+            let stripped = prompt.replace("${output}", "");
+            let trimmed = stripped.trim_end();
+            // If the last non-empty line ends with ':', it was the label that
+            // preceded ${output} — drop it so the system prompt ends on an
+            // instruction, not a prompt fragment.
+            if let Some(pos) = trimmed.rfind('\n') {
+                let last_line = trimmed[pos + 1..].trim();
+                if last_line.ends_with(':') {
+                    trimmed[..pos].trim_end().to_string()
+                } else {
+                    trimmed.to_string()
+                }
+            } else {
+                trimmed.to_string()
+            }
+        };
+        // User message is the transcript alone — the system message already
+        // constrains the output format (e.g. "Output ONLY the finalized text").
+        (transcription.to_string(), Some(instructions))
+    } else {
+        (prompt.replace("${output}", transcription), None)
+    };
+    debug!("Processed prompt length: {} chars", legacy_user_content.len());
 
-    match crate::llm_client::send_chat_completion(
+    match crate::llm_client::send_chat_completion_with_schema(
         &provider,
         api_key,
         &model,
-        processed_prompt,
+        legacy_user_content,
+        legacy_system,
+        None,
         reasoning_effort,
         reasoning,
     )
@@ -942,6 +993,14 @@ impl ShortcutAction for TranscribeAction {
         let stop_time = Instant::now();
         debug!("TranscribeAction::stop called for binding: {}", binding_id);
 
+        // Resolve cleanup up front: the single dictation hotkey follows the
+        // `post_process_enabled` toggle; an explicit always-clean binding forces
+        // it. Read once here so the whole stop path sees a stable decision.
+        let post_process = match self.post_process {
+            PostProcessMode::FromSettings => get_settings(app).post_process_enabled,
+            PostProcessMode::Force(b) => b,
+        };
+
         let ah = app.clone();
         let rm = Arc::clone(&app.state::<Arc<AudioRecordingManager>>());
         let tm = Arc::clone(&app.state::<Arc<TranscriptionManager>>());
@@ -974,7 +1033,7 @@ impl ShortcutAction for TranscribeAction {
         // block briefly for its main-thread dispatch.
         let context = {
             let settings = get_settings(app);
-            let gated = self.post_process
+            let gated = post_process
                 && settings.context_capture_enabled
                 && settings
                     .active_post_process_provider()
@@ -989,7 +1048,6 @@ impl ShortcutAction for TranscribeAction {
         };
 
         let binding_id = binding_id.to_string(); // Clone binding_id for the async task
-        let post_process = self.post_process;
         let cancel_generation = rm.cancel_generation();
 
         tauri::async_runtime::spawn(async move {
@@ -1094,22 +1152,20 @@ impl ShortcutAction for TranscribeAction {
                             let mut show_terminal_after = false;
 
                             if post_process {
-                                // Only the long tier shows the polishing spinner —
-                                // short/skipped cleanup should feel instant. When
-                                // adaptive routing doesn't apply (tier None), keep
-                                // the original always-show behavior.
+                                // Show the cleanup spinner whenever an LLM cleanup
+                                // will actually run (Short, Long, or non-tiered
+                                // providers where tier is None). Only SkipLlm —
+                                // built-in filters with no model call — stays
+                                // instant, so its transcript pastes without a flash.
                                 let tier = adaptive_tier(&get_settings(&ah), &transcription);
-                                if !matches!(
-                                    tier,
-                                    Some(CleanupTier::Short) | Some(CleanupTier::SkipLlm)
-                                ) {
+                                if !matches!(tier, Some(CleanupTier::SkipLlm)) {
                                     if style == OverlayStyle::Live {
                                         tm.emit_stream_working(StreamWorkKind::Polishing);
                                     } else {
                                         show_processing_overlay(&ah);
                                         // Compact overlay showed the spinner, so it
-                                        // gets a terminal flash after paste. Fast
-                                        // paths (short/skip/no-cleanup) stay instant.
+                                        // gets a terminal flash after paste. Only
+                                        // SkipLlm stays instant (no model runs).
                                         show_terminal_after = true;
                                     }
                                 }
@@ -1357,12 +1413,14 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
     map.insert(
         "transcribe".to_string(),
         Arc::new(TranscribeAction {
-            post_process: false,
+            post_process: PostProcessMode::FromSettings,
         }) as Arc<dyn ShortcutAction>,
     );
     map.insert(
         "transcribe_with_post_process".to_string(),
-        Arc::new(TranscribeAction { post_process: true }) as Arc<dyn ShortcutAction>,
+        Arc::new(TranscribeAction {
+            post_process: PostProcessMode::Force(true),
+        }) as Arc<dyn ShortcutAction>,
     );
     map.insert(
         "cancel".to_string(),

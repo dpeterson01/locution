@@ -645,8 +645,8 @@
         "description": "Microphone to use when laptop lid is closed"
       },
       "postProcessingToggle": {
-        "label": "Enable cleanup",
-        "description": "Enable AI-powered cleanup of your transcription"
+        "label": "Clean up every dictation",
+        "description": "When on, your dictation hotkey applies AI cleanup. When off, it pastes the raw transcript."
       },
       "muteWhileRecording": {
         "label": "Mute While Recording",

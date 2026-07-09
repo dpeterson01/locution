@@ -516,6 +516,12 @@ pub struct AppSettings {
     /// ran the Phase 5 `modes_seeded` pass (a deleted mode must stay deleted).
     #[serde(default)]
     pub context_mode_seeded: bool,
+    /// One-shot guard for the single-hotkey migration: clears any existing
+    /// `transcribe_with_post_process` binding exactly once, so upgrading users
+    /// land on the single dictation hotkey + cleanup toggle model without a
+    /// stale second key still firing cleanup.
+    #[serde(default)]
+    pub single_hotkey_migrated: bool,
     /// Phase 6: phrase-expansion shortcuts (e.g. "my email" -> an address),
     /// applied verbatim to the pasted text after any LLM cleanup.
     #[serde(default)]
@@ -657,11 +663,19 @@ fn default_short_threshold_chars() -> u32 {
 }
 
 fn default_short_model() -> String {
-    "phi4-mini:latest".to_string()
+    // Apple Silicon gets the MLX-optimized tag (Metal-accelerated); every other
+    // platform (Windows, Linux, Intel Mac) uses the portable standard tag.
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    return "qwen3.5:2b-mlx".to_string();
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+    return "qwen3.5:2b".to_string();
 }
 
-fn default_long_model() -> String {
-    "gemma3:12b".to_string()
+pub(crate) fn default_long_model() -> String {
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    return "gemma4:12b-mlx".to_string();
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+    return "gemma4:12b".to_string();
 }
 
 fn default_app_language() -> String {
@@ -829,7 +843,7 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
             id: "mode_technical_apps".to_string(),
             name: "Technical Apps".to_string(),
             prompt: "You are a precision technical text corrector. Your task is to apply surgical grammatical edits to technical notes, code-adjacent descriptions, or issue tickets.\n\nCRITICAL CONSTRAINTS:\n1. Fix spelling, immediate punctuation errors, and clear typos only.\n2. Do NOT smooth out the tone, do NOT paraphrase, and do NOT rewrite sentences to sound more elegant or professional. Preserve the exact phrasing and colloquial style.\n3. Strictly preserve all code snippets, variable names (e.g., camelCase, snake_case), database keys, URL paths, bracket types, and technical symbols exactly as written or implied.\n4. Do not insert formatting elements, paragraphs, or lists unless explicitly requested in the spoken text.\n5. Never add polite phrases, introductory filler, or concluding remarks.\n6. Output ONLY the strictly corrected raw text.\n\nInput text to clean:\n\n${output}".to_string(),
-            model: Some("phi4-mini:latest".to_string()),
+            model: Some(default_short_model()),
             use_context: false,
         },
     ]
@@ -1073,8 +1087,12 @@ pub fn get_default_settings() -> AppSettings {
             id: "transcribe_with_post_process".to_string(),
             name: "Transcribe with Cleanup".to_string(),
             description: "Converts your speech into text and applies AI cleanup.".to_string(),
+            // Unbound by default. Cleanup is now a behavior toggle on the single
+            // dictation hotkey (see `post_process_enabled`), so this dedicated
+            // always-clean binding is an optional power-user extra. The default
+            // binding string is retained below for anyone who binds it later.
             default_binding: default_post_process_shortcut.to_string(),
-            current_binding: default_post_process_shortcut.to_string(),
+            current_binding: "".to_string(),
         },
     );
     bindings.insert(
@@ -1171,6 +1189,7 @@ pub fn get_default_settings() -> AppSettings {
         modes_seeded: true,
         context_capture_enabled: false,
         context_mode_seeded: true,
+        single_hotkey_migrated: true,
         snippets: Vec::new(),
         style_card: default_style_card(),
         style_card_enabled: default_style_card_enabled(),
@@ -1375,6 +1394,22 @@ fn apply_settings_migrations(
     let platform_default = KeyboardImplementation::default();
     if settings.keyboard_implementation != platform_default {
         settings.keyboard_implementation = platform_default;
+        updated = true;
+    }
+
+    // One-time single-hotkey migration: cleanup is now a behavior toggle on the
+    // single dictation hotkey, not a separate key. Clear any existing
+    // `transcribe_with_post_process` binding exactly once so an upgrading user's
+    // stale second key (which could overlap the transcribe key and double-fire)
+    // stops triggering cleanup. Guarded so a user who deliberately rebinds it
+    // later keeps that choice.
+    if !settings.single_hotkey_migrated {
+        if let Some(binding) = settings.bindings.get_mut("transcribe_with_post_process") {
+            if !binding.current_binding.trim().is_empty() {
+                binding.current_binding = String::new();
+            }
+        }
+        settings.single_hotkey_migrated = true;
         updated = true;
     }
 

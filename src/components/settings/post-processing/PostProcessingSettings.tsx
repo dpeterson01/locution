@@ -20,7 +20,6 @@ import { BaseUrlField } from "../PostProcessingSettingsApi/BaseUrlField";
 import { ApiKeyField } from "../PostProcessingSettingsApi/ApiKeyField";
 import { ModelSelect } from "../PostProcessingSettingsApi/ModelSelect";
 import { usePostProcessProviderState } from "../PostProcessingSettingsApi/usePostProcessProviderState";
-import { ShortcutInput } from "../ShortcutInput";
 import { useSettings } from "../../../hooks/useSettings";
 import { PostProcessingSettingsVoice } from "./PostProcessingSettingsVoice";
 import { PostProcessingSettingsPerApp } from "./PostProcessingSettingsPerApp";
@@ -855,17 +854,11 @@ export const PostProcessingSettings: React.FC = () => {
 
   // Rendered inline in the Cleanup tab when cleanup is enabled. The Ollama
   // setup card is not repeated here — it lives in the Cleanup group directly
-  // above this block.
+  // above this block. Cleanup no longer has its own hotkey: it is a behavior
+  // toggle on the single dictation hotkey (see PostProcessingToggle), so no
+  // shortcut picker is rendered here.
   return (
     <div className="space-y-6">
-      <SettingsGroup title={t("settings.postProcessing.hotkey.title")}>
-        <ShortcutInput
-          shortcutId="transcribe_with_post_process"
-          descriptionMode="tooltip"
-          grouped={true}
-        />
-      </SettingsGroup>
-
       <SettingsGroup title={t("settings.postProcessing.api.title")}>
         <PostProcessingSettingsApi />
       </SettingsGroup>

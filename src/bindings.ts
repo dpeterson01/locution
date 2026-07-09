@@ -1127,6 +1127,13 @@ context_capture_enabled?: boolean;
  */
 context_mode_seeded?: boolean; 
 /**
+ * One-shot guard for the single-hotkey migration: clears any existing
+ * `transcribe_with_post_process` binding exactly once, so upgrading users
+ * land on the single dictation hotkey + cleanup toggle model without a
+ * stale second key still firing cleanup.
+ */
+single_hotkey_migrated?: boolean; 
+/**
  * Phase 6: phrase-expansion shortcuts (e.g. "my email" -> an address),
  * applied verbatim to the pasted text after any LLM cleanup.
  */

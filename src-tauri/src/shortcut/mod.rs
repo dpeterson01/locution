@@ -749,21 +749,12 @@ pub fn change_auto_submit_key_setting(app: AppHandle, key: String) -> Result<(),
 pub fn change_post_process_enabled_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.post_process_enabled = enabled;
-    settings::write_settings(&app, settings.clone());
+    settings::write_settings(&app, settings);
 
-    // Register or unregister the post-processing shortcut
-    if let Some(binding) = settings
-        .bindings
-        .get("transcribe_with_post_process")
-        .cloned()
-    {
-        if enabled {
-            let _ = register_shortcut(&app, binding);
-        } else {
-            let _ = unregister_shortcut(&app, binding);
-        }
-    }
-
+    // Cleanup is now a behavior toggle on the single dictation hotkey, not a
+    // separate key — so flipping it changes what the `transcribe` action does at
+    // stop time (see actions.rs `PostProcessMode`), and there is no shortcut to
+    // register or unregister here.
     Ok(())
 }
 
@@ -1163,7 +1154,7 @@ pub async fn distill_style_card(app: AppHandle, samples: Vec<String>) -> Result<
         .cloned()
         .ok_or_else(|| "Local provider is not configured".to_string())?;
     let model = if settings.long_model.trim().is_empty() {
-        "gemma3:12b".to_string()
+        crate::settings::default_long_model()
     } else {
         settings.long_model.clone()
     };
