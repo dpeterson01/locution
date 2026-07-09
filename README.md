@@ -38,8 +38,13 @@ The process is entirely local:
    ```
 4. Install [Ollama](https://ollama.com) for local AI cleanup, then pull the models Locution uses:
    ```bash
-   ollama pull phi4-mini:latest
-   ollama pull gemma3:12b
+   ollama pull qwen3.5:2b
+   ollama pull gemma4:12b
+   ```
+   On Apple Silicon, pull the Metal-accelerated variants instead for lower latency:
+   ```bash
+   ollama pull qwen3.5:2b-mlx
+   ollama pull gemma4:12b-mlx
    ```
    Keep Ollama running (`ollama serve`). The speech-to-text model downloads on first launch.
 5. Launch **Locution** and grant Microphone and Accessibility permissions when prompted.

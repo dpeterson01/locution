@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Loader2, RotateCcw } from "lucide-react";
+import { arch, platform } from "@tauri-apps/plugin-os";
 import { commands, OllamaSetupError } from "@/bindings";
 import OnboardingLockup from "./OnboardingLockup";
 import { Button } from "../ui/Button";
@@ -17,9 +18,12 @@ interface OllamaOnboardingProps {
   showLogo?: boolean;
 }
 
-// Keep in sync with src-tauri/src/ollama_setup.rs SHORT_TIER_MODEL/LONG_TIER_MODEL.
-const SHORT_TIER_MODEL = "phi4-mini:latest";
-const LONG_TIER_MODEL = "gemma3:12b";
+// Keep in sync with src-tauri/src/settings.rs default_short_model/default_long_model.
+// Apple Silicon gets the MLX-optimized tags (Metal-accelerated); every other
+// platform (Windows, Linux, Intel Mac) uses the portable standard tags.
+const IS_APPLE_SILICON = platform() === "macos" && arch() === "aarch64";
+const SHORT_TIER_MODEL = IS_APPLE_SILICON ? "qwen3.5:2b-mlx" : "qwen3.5:2b";
+const LONG_TIER_MODEL = IS_APPLE_SILICON ? "gemma4:12b-mlx" : "gemma4:12b";
 const TIER_MODELS = [SHORT_TIER_MODEL, LONG_TIER_MODEL];
 
 type OverallPhase =

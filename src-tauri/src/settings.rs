@@ -552,7 +552,7 @@ fn default_model() -> String {
     "".to_string()
 }
 
-const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 1;
+const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 2;
 
 fn default_settings_schema_version() -> u32 {
     CURRENT_SETTINGS_SCHEMA_VERSION
@@ -814,39 +814,54 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
         LLMPrompt {
             id: SHORT_DICTATION_MODE_ID.to_string(),
             name: "Short Dictation".to_string(),
-            prompt: "You are a precision text cleaner. Fix speech-to-text artifacts and grammatical errors while preserving the user's exact phrasing and voice.\n\nRULES:\n1. Fix obvious spelling mistakes, typos, missing punctuation, and capitalization errors.\n2. Delete spoken filler words (e.g., \"um\", \"uh\", \"like\", \"you know\") and accidental word repetitions.\n3. Keep all original vocabulary, slang, or jargon. Do NOT paraphrase or smooth out the style.\n4. Keep the output as a single, continuous line. Do NOT introduce line breaks, lists, or paragraph transitions.\n5. Output ONLY the finalized text. Absolutely no chat or explanations.\n\nInput text to clean:\n\n${output}".to_string(),
+            prompt: "You clean up short spoken dictation. Fix spelling, typos, missing punctuation, and capitalization, and drop filler words like um, uh, like, and you know along with accidental repeated words. Keep the speaker's own wording, slang, and jargon exactly. Never paraphrase, reword, or make it sound more formal. Return the text as one continuous line with no line breaks, lists, or headings. Respond with nothing but the cleaned text: no preamble, no explanation, no quotation marks, no sign-off.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
         LLMPrompt {
             id: LONG_DICTATION_MODE_ID.to_string(),
             name: "Long Dictation".to_string(),
-            prompt: "You are a precision text cleaner. Fix speech-to-text artifacts and grammatical errors while preserving the user's exact phrasing and voice.\n\nRULES:\n1. Fix obvious spelling mistakes, typos, missing punctuation, and capitalization errors.\n2. Delete spoken filler words (e.g., \"um\", \"uh\", \"like\", \"you know\") and accidental word repetitions.\n3. Keep all original vocabulary, slang, or jargon. Do NOT rewrite sentences to sound like an AI.\n4. Organize the text into logical paragraphs to ensure readability. Break up long, continuous walls of text into distinct thoughts.\n5. Output ONLY the finalized text. Absolutely no chat or explanations.\n\nInput text to clean:\n\n${output}".to_string(),
+            prompt: "You clean up longer spoken dictation. Fix spelling, typos, punctuation, and capitalization, and drop filler words like um, uh, like, and you know along with accidental repeated words. Keep the speaker's own wording, slang, and jargon. Fix the mechanics; never rewrite sentences to sound like an assistant wrote them. Break the text into clear paragraphs so it reads well, but do not add headings, bullet points, or summaries. Respond with nothing but the cleaned text: no preamble, no explanation, no quotation marks, no sign-off.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
         LLMPrompt {
             id: "mode_communication".to_string(),
             name: "Communication Apps".to_string(),
-            prompt: "You are an expert communication editor. Your sole task is to clean up raw dictation into clear, professional, and natural-sounding messaging.\n\nCRITICAL CONSTRAINTS:\n1. Fix all grammar, spelling, typos, and syntax errors.\n2. Remove filler words (um, uh, like, you know) and accidental speech repetitions.\n3. Organize the text into logical, readable paragraphs if it is long.\n4. Maintain a natural human tone. Avoid robotic or overly formal \"AI cliches\" (do NOT start with \"I hope this email finds you well\" or use words like \"delve\", \"testament\", or \"revolutionize\").\n5. If the input implies an email or message structure, ensure clear transitions but do not invent fake names or signatures.\n6. Output ONLY the finalized message. Never include introductory text, explanations, or wrap-up commentary.\n\nInput text to clean:\n\n${output}".to_string(),
+            prompt: "You turn raw dictation into a clear, natural message ready to send in chat or email. Fix all grammar, spelling, and punctuation, drop filler words and false starts, and organize it into readable sentences and short paragraphs. Keep it sounding like a real person, not a corporate template. Do not open with filler like 'I hope this email finds you well', and avoid words like delve, testament, vibrant, crucial, revolutionize, and underscore. Do not use em dashes as connectors, do not pad ideas into groups of three, and do not add negative-parallelism phrasing like 'not just X, but Y'. Do not invent names, greetings, or signatures the speaker did not say. Respond with nothing but the finished message: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
         LLMPrompt {
             id: "mode_notes_apps".to_string(),
             name: "Notes Apps".to_string(),
-            prompt: "You are a structural organization engine. Your task is to process unorganized dictation thoughts and map them into clear, scannable Markdown documentation.\n\nCRITICAL CONSTRAINTS:\n1. Fix all underlying spelling and grammatical errors.\n2. Categorize loose thoughts logically using clean Markdown formatting.\n3. Use bold headers (## or ###) for primary themes or distinct topics mentioned.\n4. Convert itemized thoughts or descriptions into clean bullet points.\n5. If actionable items or tasks are detected in the speech, extract them into a dedicated section titled \"### Action Items\" at the bottom.\n6. Preserve the exact vocabulary and technical context used by the speaker—do not summarize away critical details.\n7. Output ONLY the formatted markdown document. Do not include chat greetings, system commentary, or explanations.\n\nInput text to clean:\n\n${output}".to_string(),
+            prompt: "You turn dictated thoughts into a clean, scannable note. Fix spelling, grammar, and punctuation, and keep the speaker's exact vocabulary and technical details without summarizing anything away. If the dictation clearly covers distinct topics, group them under short Markdown headings (## or ###) and turn listed items into bullet points. If it is just a quick thought, leave it as plain sentences without imposing structure. If the speaker names things to do, collect them under a final '### Action Items' section. Respond with nothing but the note itself: no preamble, no explanation, no commentary.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
         LLMPrompt {
             id: "mode_technical_apps".to_string(),
             name: "Technical Apps".to_string(),
-            prompt: "You are a precision technical text corrector. Your task is to apply surgical grammatical edits to technical notes, code-adjacent descriptions, or issue tickets.\n\nCRITICAL CONSTRAINTS:\n1. Fix spelling, immediate punctuation errors, and clear typos only.\n2. Do NOT smooth out the tone, do NOT paraphrase, and do NOT rewrite sentences to sound more elegant or professional. Preserve the exact phrasing and colloquial style.\n3. Strictly preserve all code snippets, variable names (e.g., camelCase, snake_case), database keys, URL paths, bracket types, and technical symbols exactly as written or implied.\n4. Do not insert formatting elements, paragraphs, or lists unless explicitly requested in the spoken text.\n5. Never add polite phrases, introductory filler, or concluding remarks.\n6. Output ONLY the strictly corrected raw text.\n\nInput text to clean:\n\n${output}".to_string(),
+            prompt: "You make minimal corrections to technical dictation such as notes, code-adjacent descriptions, or issue tickets. Fix only clear spelling mistakes, typos, and missing punctuation. Do not paraphrase, reword, reorder, or make anything sound more polished; keep the exact phrasing and casual style. Preserve every code snippet, variable name (camelCase, snake_case), file path, URL, key, bracket, and symbol exactly as spoken or implied. Do not add headings, bullets, paragraphs, greetings, or closing remarks. Respond with nothing but the corrected text: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
             model: Some(default_short_model()),
             use_context: false,
         },
     ]
+}
+
+/// Prompt text each built-in mode shipped with before the v2 settings
+/// migration. Used to detect an unedited default so the migration can refresh
+/// it in place without overwriting a prompt the user customized. Do not change
+/// these strings — they are historical fingerprints, not live defaults.
+fn pre_v2_default_prompt(mode_id: &str) -> Option<&'static str> {
+    Some(match mode_id {
+        SHORT_DICTATION_MODE_ID => "You are a precision text cleaner. Fix speech-to-text artifacts and grammatical errors while preserving the user's exact phrasing and voice.\n\nRULES:\n1. Fix obvious spelling mistakes, typos, missing punctuation, and capitalization errors.\n2. Delete spoken filler words (e.g., \"um\", \"uh\", \"like\", \"you know\") and accidental word repetitions.\n3. Keep all original vocabulary, slang, or jargon. Do NOT paraphrase or smooth out the style.\n4. Keep the output as a single, continuous line. Do NOT introduce line breaks, lists, or paragraph transitions.\n5. Output ONLY the finalized text. Absolutely no chat or explanations.\n\nInput text to clean:\n\n${output}",
+        LONG_DICTATION_MODE_ID => "You are a precision text cleaner. Fix speech-to-text artifacts and grammatical errors while preserving the user's exact phrasing and voice.\n\nRULES:\n1. Fix obvious spelling mistakes, typos, missing punctuation, and capitalization errors.\n2. Delete spoken filler words (e.g., \"um\", \"uh\", \"like\", \"you know\") and accidental word repetitions.\n3. Keep all original vocabulary, slang, or jargon. Do NOT rewrite sentences to sound like an AI.\n4. Organize the text into logical paragraphs to ensure readability. Break up long, continuous walls of text into distinct thoughts.\n5. Output ONLY the finalized text. Absolutely no chat or explanations.\n\nInput text to clean:\n\n${output}",
+        "mode_communication" => "You are an expert communication editor. Your sole task is to clean up raw dictation into clear, professional, and natural-sounding messaging.\n\nCRITICAL CONSTRAINTS:\n1. Fix all grammar, spelling, typos, and syntax errors.\n2. Remove filler words (um, uh, like, you know) and accidental speech repetitions.\n3. Organize the text into logical, readable paragraphs if it is long.\n4. Maintain a natural human tone. Avoid robotic or overly formal \"AI cliches\" (do NOT start with \"I hope this email finds you well\" or use words like \"delve\", \"testament\", or \"revolutionize\").\n5. If the input implies an email or message structure, ensure clear transitions but do not invent fake names or signatures.\n6. Output ONLY the finalized message. Never include introductory text, explanations, or wrap-up commentary.\n\nInput text to clean:\n\n${output}",
+        "mode_notes_apps" => "You are a structural organization engine. Your task is to process unorganized dictation thoughts and map them into clear, scannable Markdown documentation.\n\nCRITICAL CONSTRAINTS:\n1. Fix all underlying spelling and grammatical errors.\n2. Categorize loose thoughts logically using clean Markdown formatting.\n3. Use bold headers (## or ###) for primary themes or distinct topics mentioned.\n4. Convert itemized thoughts or descriptions into clean bullet points.\n5. If actionable items or tasks are detected in the speech, extract them into a dedicated section titled \"### Action Items\" at the bottom.\n6. Preserve the exact vocabulary and technical context used by the speaker—do not summarize away critical details.\n7. Output ONLY the formatted markdown document. Do not include chat greetings, system commentary, or explanations.\n\nInput text to clean:\n\n${output}",
+        "mode_technical_apps" => "You are a precision technical text corrector. Your task is to apply surgical grammatical edits to technical notes, code-adjacent descriptions, or issue tickets.\n\nCRITICAL CONSTRAINTS:\n1. Fix spelling, immediate punctuation errors, and clear typos only.\n2. Do NOT smooth out the tone, do NOT paraphrase, and do NOT rewrite sentences to sound more elegant or professional. Preserve the exact phrasing and colloquial style.\n3. Strictly preserve all code snippets, variable names (e.g., camelCase, snake_case), database keys, URL paths, bracket types, and technical symbols exactly as written or implied.\n4. Do not insert formatting elements, paragraphs, or lists unless explicitly requested in the spoken text.\n5. Never add polite phrases, introductory filler, or concluding remarks.\n6. Output ONLY the strictly corrected raw text.\n\nInput text to clean:\n\n${output}",
+        _ => return None,
+    })
 }
 
 fn default_style_card() -> String {
@@ -1365,6 +1380,41 @@ fn apply_settings_migrations(
         if settings.transcribe_gpu_device > 0 {
             settings.transcribe_accelerator = TranscribeAcceleratorSetting::Auto;
             settings.transcribe_gpu_device = default_transcribe_gpu_device();
+        }
+        settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
+        updated = true;
+    }
+
+    // v2 settings migration: push the refreshed cleanup defaults to existing
+    // users. Only values still matching the pre-v2 shipped defaults are
+    // replaced, so a user's custom model choice or edited mode prompt is never
+    // clobbered. Fresh installs already carry the new defaults and skip this.
+    if stored_schema_version < 2 {
+        const OLD_SHORT_MODEL: &str = "phi4-mini:latest";
+        const OLD_LONG_MODEL: &str = "gemma3:12b";
+        if settings.short_model.trim() == OLD_SHORT_MODEL {
+            settings.short_model = default_short_model();
+        }
+        if settings.long_model.trim() == OLD_LONG_MODEL {
+            settings.long_model = default_long_model();
+        }
+        let new_defaults = default_post_process_prompts();
+        for stored in settings.post_process_prompts.iter_mut() {
+            let Some(old_prompt) = pre_v2_default_prompt(&stored.id) else {
+                continue;
+            };
+            // Leave any mode whose prompt the user has edited untouched.
+            if stored.prompt != old_prompt {
+                continue;
+            }
+            if let Some(new_mode) = new_defaults.iter().find(|m| m.id == stored.id) {
+                stored.prompt = new_mode.prompt.clone();
+                // Refresh the pinned model only when it is still the pre-v2
+                // default (the Technical mode pinned phi4-mini); a custom pin stays.
+                if stored.model.as_deref() == Some(OLD_SHORT_MODEL) {
+                    stored.model = new_mode.model.clone();
+                }
+            }
         }
         settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
         updated = true;
