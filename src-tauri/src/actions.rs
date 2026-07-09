@@ -875,6 +875,30 @@ impl ShortcutAction for TranscribeAction {
         let settings = get_settings(app);
         let is_always_on = settings.always_on_microphone;
 
+        // Warm the short-tier cleanup model while the user records. Ollama loads
+        // it cold on first use otherwise, and that latency lands on the paste;
+        // firing the load now overlaps it with recording + transcription. Only
+        // for the local Ollama ("custom") provider with cleanup enabled — hosted
+        // providers have no local model to load. We warm the short model because
+        // it is the latency-sensitive common path; a long-tier run still loads
+        // its model on demand at cleanup time.
+        let will_clean = match self.post_process {
+            PostProcessMode::FromSettings => settings.post_process_enabled,
+            PostProcessMode::Force(clean) => clean,
+        };
+        if will_clean
+            && settings
+                .active_post_process_provider()
+                .map(|p| p.id.as_str())
+                == Some("custom")
+            && !settings.short_model.trim().is_empty()
+        {
+            let model = settings.short_model.trim().to_string();
+            tauri::async_runtime::spawn(async move {
+                crate::ollama_setup::warm_model(model, "10m").await;
+            });
+        }
+
         let selected_model_info = app
             .state::<Arc<ModelManager>>()
             .get_model_info(&settings.selected_model);

@@ -132,6 +132,38 @@ async fn list_local_models() -> Vec<String> {
     tags.models.into_iter().map(|m| m.name).collect()
 }
 
+/// Warm-load a model into Ollama's memory ahead of time. An `/api/generate`
+/// request with no prompt is Ollama's "load" request: it returns once the model
+/// is resident and holds it for `keep_alive`. Fired at record-start so the
+/// short-tier cleanup model's cold start overlaps the time the user spends
+/// recording and transcribing, instead of stalling the paste afterward.
+///
+/// Best-effort and fire-and-forget: any failure (Ollama down, model missing)
+/// is ignored — cleanup still works, just without the warm-up head start. Uses
+/// its own long-timeout client because a cold load reads several GB from disk
+/// and can exceed the short probe timeout.
+pub async fn warm_model(model: String, keep_alive: &str) {
+    #[derive(Serialize)]
+    struct WarmRequest<'a> {
+        model: &'a str,
+        keep_alive: &'a str,
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(120))
+        .build()
+        .unwrap_or_default();
+
+    let _ = client
+        .post(format!("{OLLAMA_NATIVE_BASE_URL}/api/generate"))
+        .json(&WarmRequest {
+            model: &model,
+            keep_alive,
+        })
+        .send()
+        .await;
+}
+
 /// Probe current Ollama state: installed/running + every model already
 /// pulled. Called on wizard mount and each time the Settings post-processing
 /// section mounts (the "check on next visit" mechanism — deliberately not a
