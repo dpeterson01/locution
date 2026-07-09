@@ -552,7 +552,7 @@ fn default_model() -> String {
     "".to_string()
 }
 
-const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 2;
+const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 3;
 
 fn default_settings_schema_version() -> u32 {
     CURRENT_SETTINGS_SCHEMA_VERSION
@@ -843,7 +843,7 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
             id: "mode_technical_apps".to_string(),
             name: "Technical Apps".to_string(),
             prompt: "You make minimal corrections to technical dictation such as notes, code-adjacent descriptions, or issue tickets. Fix only clear spelling mistakes, typos, and missing punctuation. Do not paraphrase, reword, reorder, or make anything sound more polished; keep the exact phrasing and casual style. Preserve every code snippet, variable name (camelCase, snake_case), file path, URL, key, bracket, and symbol exactly as spoken or implied. Do not add headings, bullets, paragraphs, greetings, or closing remarks. Respond with nothing but the corrected text: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
-            model: Some(default_short_model()),
+            model: None,
             use_context: false,
         },
     ]
@@ -1420,6 +1420,25 @@ fn apply_settings_migrations(
         updated = true;
     }
 
+    // v3 settings migration: modes now carry only a prompt; the model is chosen
+    // by the length tier (short_model / long_model). The Technical mode was the
+    // only default that pinned a model (the short model). Clear that pin for
+    // existing users so long technical dictation can route to the long model,
+    // but only when the pin still equals the default short model — a model the
+    // user pinned by hand stays. Runs after the v2 block, which for a pre-v2
+    // user has already refreshed the Technical pin to the current short model.
+    if stored_schema_version < 3 {
+        for stored in settings.post_process_prompts.iter_mut() {
+            if stored.id == "mode_technical_apps"
+                && stored.model.as_deref() == Some(default_short_model().as_str())
+            {
+                stored.model = None;
+            }
+        }
+        settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
+        updated = true;
+    }
+
     // One-time overlay migration (only while the new key is absent): the retired
     // overlay_position `none` meant "hide the overlay" → OverlayStyle::None; any
     // other position had it visible → Live. The position enum no longer has a
@@ -1626,6 +1645,53 @@ mod tests {
             settings.settings_schema_version,
             CURRENT_SETTINGS_SCHEMA_VERSION
         );
+    }
+
+    #[test]
+    fn v3_migration_clears_default_technical_model_pin() {
+        // A v2 store whose Technical mode still carries the default short-model
+        // pin. v3 drops it so long technical dictation routes to the long model.
+        let mut settings = get_default_settings();
+        for prompt in settings.post_process_prompts.iter_mut() {
+            if prompt.id == "mode_technical_apps" {
+                prompt.model = Some(default_short_model());
+            }
+        }
+
+        let raw = serde_json::json!({ "settings_schema_version": 2 });
+        assert!(apply_settings_migrations(&mut settings, &raw));
+
+        let technical = settings
+            .post_process_prompts
+            .iter()
+            .find(|p| p.id == "mode_technical_apps")
+            .unwrap();
+        assert_eq!(technical.model, None);
+        assert_eq!(
+            settings.settings_schema_version,
+            CURRENT_SETTINGS_SCHEMA_VERSION
+        );
+    }
+
+    #[test]
+    fn v3_migration_keeps_hand_pinned_technical_model() {
+        // A model the user pinned by hand must survive the v3 pin clear.
+        let mut settings = get_default_settings();
+        for prompt in settings.post_process_prompts.iter_mut() {
+            if prompt.id == "mode_technical_apps" {
+                prompt.model = Some("my-custom-model:latest".to_string());
+            }
+        }
+
+        let raw = serde_json::json!({ "settings_schema_version": 2 });
+        assert!(apply_settings_migrations(&mut settings, &raw));
+
+        let technical = settings
+            .post_process_prompts
+            .iter()
+            .find(|p| p.id == "mode_technical_apps")
+            .unwrap();
+        assert_eq!(technical.model.as_deref(), Some("my-custom-model:latest"));
     }
 
     #[test]
