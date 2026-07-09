@@ -353,6 +353,38 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
 
   const formattedDate = formatDateTime(String(entry.timestamp), i18n.language);
 
+  // Mode badge: "name · Tier · model" (tier shown only when the adaptive
+  // router set one; hosted providers have none). Present only when cleanup
+  // actually ran.
+  const tierText = entry.cleanup_tier
+    ? entry.cleanup_tier.charAt(0).toUpperCase() + entry.cleanup_tier.slice(1)
+    : null;
+  const modeBadge = entry.cleanup_mode_name
+    ? [entry.cleanup_mode_name, tierText, entry.cleanup_model]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+
+  // Failure reason, reusing the diagnostic-toast strings so wording stays
+  // consistent with the live error. Old rows have no cleanup_error → no badge.
+  const failureReason = (() => {
+    const key = entry.cleanup_error;
+    if (!key) return null;
+    if (key === "ollama_unreachable")
+      return t("errors.diagnostics.ollamaUnreachableTitle");
+    if (key === "model_missing") return t("errors.diagnostics.modelMissing");
+    return t("errors.diagnostics.postProcessFailed");
+  })();
+
+  // The cleaned text is only worth showing when it actually differs from the
+  // raw transcript (a real cleanup happened, not a skip or a no-op).
+  const cleanedText =
+    !retrying &&
+    entry.post_processed_text &&
+    entry.post_processed_text !== entry.transcription_text
+      ? entry.post_processed_text
+      : null;
+
   return (
     <div className="px-4 py-2 pb-5 flex flex-col gap-3">
       <div className="flex justify-between items-center">
@@ -410,6 +442,27 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
         </div>
       </div>
 
+      {(modeBadge || failureReason) && (
+        <div className="flex flex-wrap items-center gap-2 -mt-1">
+          {modeBadge && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-text/5 text-text/60">
+              {modeBadge}
+            </span>
+          )}
+          {failureReason && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
+              {t("settings.history.cleanupFailed")}: {failureReason}
+            </span>
+          )}
+        </div>
+      )}
+
+      {cleanedText && (
+        <p className="text-xs font-medium uppercase tracking-wide text-text/40 -mb-2">
+          {t("settings.history.rawText")}
+        </p>
+      )}
+
       <p
         className={`italic text-sm pb-2 ${
           retrying
@@ -438,6 +491,17 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
             ? entry.transcription_text
             : t("settings.history.transcriptionFailed")}
       </p>
+
+      {cleanedText && (
+        <div className="flex flex-col gap-1 -mt-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-text/40">
+            {t("settings.history.cleanedText")}
+          </p>
+          <p className="text-sm text-text/90 select-text cursor-text whitespace-pre-wrap break-words pb-2">
+            {cleanedText}
+          </p>
+        </div>
+      )}
 
       <AudioPlayer onLoadRequest={handleLoadAudio} className="w-full" />
     </div>
