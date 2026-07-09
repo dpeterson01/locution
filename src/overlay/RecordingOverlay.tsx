@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { Settings as SettingsIcon } from "lucide-react";
+import { Check, Settings as SettingsIcon, X } from "lucide-react";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./RecordingOverlay.css";
@@ -18,7 +18,13 @@ type OverlayState =
   | "recording"
   | "streaming"
   | "transcribing"
-  | "processing";
+  | "processing"
+  // Short-lived terminal states flashed on the compact overlay after the
+  // processing spinner: cleanup ran, cleanup was skipped (plain transcript),
+  // or cleanup failed and the raw transcript was kept.
+  | "cleaned"
+  | "transcribed"
+  | "failed";
 
 // Number of reactive bars in the waveform (the simple, smoothed style shared by
 // every overlay form). Mic levels arrive as 16 FFT buckets; we take the first N.
@@ -647,6 +653,31 @@ const RecordingOverlay: React.FC = () => {
     </div>
   );
 
+  // Terminal flash: a checkmark (cleaned / transcribed) or an error glyph
+  // (cleanup failed) plus a label, in the same 3-zone grid as workingRow so it
+  // swaps in place. No cancel button — the work is already done.
+  const terminalRow = (label: string, failed: boolean) => (
+    <div className="sbase">
+      <div className="sbase-l">
+        {failed ? (
+          <X
+            className="sterminal-icon sterminal-failed"
+            size={14}
+            strokeWidth={2.75}
+          />
+        ) : (
+          <Check
+            className="sterminal-icon sterminal-cleaned"
+            size={14}
+            strokeWidth={2.75}
+          />
+        )}
+      </div>
+      <span className="swork-label">{label}</span>
+      <div className="sbase-r" />
+    </div>
+  );
+
   // ---- Idle overlay: tiny dash pill; hover grows it into the controls row ----
   if (state === "idle") {
     return (
@@ -737,13 +768,23 @@ const RecordingOverlay: React.FC = () => {
   }
 
   // ---- Minimal overlay: exactly one row at a time — waveform (recording), or a
-  // spinner + label (transcribing / processing). Never both. The pill animates its
-  // width between them; the cancel button is in both rows so it stays put.
+  // spinner + label (transcribing / processing), or a terminal flash
+  // (cleaned / transcribed / cleanup failed). Never more than one. The pill
+  // animates its width between them; the cancel button is in both work rows so
+  // it stays put.
   const working = state === "transcribing" || state === "processing";
+  const terminal =
+    state === "cleaned" || state === "transcribed" || state === "failed";
   const workLabel =
     state === "processing"
       ? t("overlay.processing")
       : t("overlay.transcribing");
+  const terminalLabel =
+    state === "cleaned"
+      ? t("overlay.cleaned")
+      : state === "failed"
+        ? t("overlay.cleanupFailed")
+        : t("overlay.transcribed");
 
   return (
     <div
@@ -756,9 +797,13 @@ const RecordingOverlay: React.FC = () => {
           <div className="scard sctrl-card">{controlsRow}</div>
         )}
         <div
-          className={`scard compact ${working && isVisible ? "cworking" : ""}`}
+          className={`scard compact ${(working || terminal) && isVisible ? "cworking" : ""}`}
         >
-          {working ? workingRow(workLabel, true) : listeningRow(false, true)}
+          {terminal
+            ? terminalRow(terminalLabel, state === "failed")
+            : working
+              ? workingRow(workLabel, true)
+              : listeningRow(false, true)}
         </div>
         {position === "top" && hovering && (
           <div className="scard sctrl-card">{controlsRow}</div>

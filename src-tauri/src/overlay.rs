@@ -435,6 +435,15 @@ pub fn show_processing_overlay(app_handle: &AppHandle) {
     show_overlay_state(app_handle, "processing");
 }
 
+/// Shows a short-lived terminal state on the compact overlay after processing
+/// finishes: `"cleaned"`, `"transcribed"`, or `"failed"`. Reuses the compact
+/// window at its default size; the webview swaps the spinner for a checkmark
+/// (cleaned/transcribed) or an error glyph (failed). The caller is responsible
+/// for hiding the overlay after a brief delay.
+pub fn show_terminal_overlay(app_handle: &AppHandle, kind: &str) {
+    show_overlay_state(app_handle, kind);
+}
+
 /// Shows the small idle dash pill (always-show mode). No-op when the user
 /// disabled always-show, the overlay style is None, or a recording is in
 /// flight — settings changed mid-recording (e.g. the overlay's Expand button)

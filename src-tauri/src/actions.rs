@@ -1088,6 +1088,11 @@ impl ShortcutAction for TranscribeAction {
                                 transcription
                             );
 
+                            // Set when the compact processing spinner was shown, so
+                            // the paste path knows to flash a terminal state
+                            // (Cleaned/Transcribed/Cleanup failed) before hiding.
+                            let mut show_terminal_after = false;
+
                             if post_process {
                                 // Only the long tier shows the polishing spinner —
                                 // short/skipped cleanup should feel instant. When
@@ -1102,6 +1107,10 @@ impl ShortcutAction for TranscribeAction {
                                         tm.emit_stream_working(StreamWorkKind::Polishing);
                                     } else {
                                         show_processing_overlay(&ah);
+                                        // Compact overlay showed the spinner, so it
+                                        // gets a terminal flash after paste. Fast
+                                        // paths (short/skip/no-cleanup) stay instant.
+                                        show_terminal_after = true;
                                     }
                                 }
                             }
@@ -1134,6 +1143,17 @@ impl ShortcutAction for TranscribeAction {
                                     error!("Failed to save history entry: {}", err);
                                 }
                             }
+
+                            // Which terminal state the compact overlay flashes
+                            // (only when show_terminal_after): a hard failure
+                            // wins, then a real cleanup, else a plain transcribe.
+                            let terminal_kind = if processed.cleanup_failure.is_some() {
+                                "failed"
+                            } else if processed.cleanup_mode.is_some() {
+                                "cleaned"
+                            } else {
+                                "transcribed"
+                            };
 
                             if processed.final_text.is_empty() {
                                 utils::hide_recording_overlay(&ah);
@@ -1183,7 +1203,22 @@ impl ShortcutAction for TranscribeAction {
                                             let _ = ah_clone.emit("paste-error", ());
                                         }
                                     }
-                                    utils::hide_recording_overlay(&ah_clone);
+                                    // Slow path (compact spinner was shown): flash
+                                    // the terminal state, then hide after a beat on a
+                                    // background thread so paste isn't blocked. Fast
+                                    // paths hide immediately, keeping the instant feel.
+                                    if show_terminal_after {
+                                        utils::show_terminal_overlay(&ah_clone, terminal_kind);
+                                        let ah_hide = ah_clone.clone();
+                                        std::thread::spawn(move || {
+                                            std::thread::sleep(std::time::Duration::from_millis(
+                                                800,
+                                            ));
+                                            utils::hide_recording_overlay(&ah_hide);
+                                        });
+                                    } else {
+                                        utils::hide_recording_overlay(&ah_clone);
+                                    }
                                     change_tray_icon(&ah_clone, TrayIconState::Idle);
                                 })
                                 .unwrap_or_else(|e| {

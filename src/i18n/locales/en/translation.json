@@ -765,6 +765,9 @@
   "overlay": {
     "transcribing": "Transcribing...",
     "processing": "Processing...",
+    "cleaned": "Cleaned",
+    "transcribed": "Transcribed",
+    "cleanupFailed": "Cleanup failed",
     "idleHint": "Locution",
     "controls": {
       "changeMode": "Change mode",
