@@ -1,6 +1,7 @@
 use crate::actions::ACTION_MAP;
 use crate::managers::audio::AudioRecordingManager;
 use log::{debug, error, warn};
+use std::collections::HashMap;
 use std::sync::mpsc::{self, Sender};
 use std::sync::Arc;
 use std::thread;
@@ -48,7 +49,12 @@ impl TranscriptionCoordinator {
         thread::spawn(move || {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 let mut stage = Stage::Idle;
-                let mut last_press: Option<Instant> = None;
+                // Per-binding debounce: prevents rapid key-repeat, but does not
+                // block a *different* binding from firing within the window.
+                // A shared timestamp would cause the cleanup binding to silence
+                // the plain-transcribe binding (or vice-versa) when both fire
+                // nearly simultaneously due to key overlap.
+                let mut last_press: HashMap<String, Instant> = HashMap::new();
 
                 while let Ok(cmd) = rx.recv() {
                     match cmd {
@@ -62,11 +68,11 @@ impl TranscriptionCoordinator {
                             // Releases always pass through for push-to-talk.
                             if is_pressed {
                                 let now = Instant::now();
-                                if last_press.is_some_and(|t| now.duration_since(t) < DEBOUNCE) {
+                                if last_press.get(&binding_id).is_some_and(|t| now.duration_since(*t) < DEBOUNCE) {
                                     debug!("Debounced press for '{binding_id}'");
                                     continue;
                                 }
-                                last_press = Some(now);
+                                last_press.insert(binding_id.clone(), now);
                             }
 
                             if push_to_talk {
