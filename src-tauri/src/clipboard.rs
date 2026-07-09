@@ -5,12 +5,23 @@ use crate::settings::{get_settings, AutoSubmitKey, ClipboardHandling, PasteMetho
 use enigo::{Direction, Enigo, Key, Keyboard};
 use log::info;
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 #[cfg(target_os = "linux")]
 use crate::utils::{is_kde_wayland, is_wayland};
+
+/// How long to wait before restoring the user's original clipboard after a
+/// paste, on macOS/Windows. The restore runs on a background thread, so this
+/// delay doesn't block the paste pipeline — it just needs to exceed the time a
+/// slow target app takes to read the pasteboard after the synthetic paste, or
+/// the restore clobbers our text and the app pastes the previous clipboard.
+/// Measured failures at 500ms in a slow app, so this carries margin; the only
+/// cost of a longer delay is a wider window in which a manual copy could be
+/// overwritten by the restore.
+#[cfg(not(target_os = "linux"))]
+const RESTORE_CLIPBOARD_DELAY_MS: u64 = 1000;
 
 /// Pastes text using the clipboard: saves current content, writes text, sends paste keystroke, restores clipboard.
 fn paste_via_clipboard(
@@ -42,6 +53,27 @@ fn paste_via_clipboard(
 
     write_result?;
 
+    // Ensure the write reached the system pasteboard before pasting. A fixed
+    // sleep can be too short — the clipboard write propagates asynchronously,
+    // so pasting too early makes the target app paste the PREVIOUS clipboard
+    // contents instead of `text`. Poll until the pasteboard reflects `text`
+    // (bounded by a deadline so a read failure or an app that normalizes text
+    // can't hang the paste). Linux keeps a fixed sleep since its write may go
+    // through wl-copy and not read back identically here.
+    #[cfg(not(target_os = "linux"))]
+    {
+        let deadline = Instant::now() + Duration::from_millis(paste_delay_ms.max(300));
+        loop {
+            if clipboard.read_text().ok().as_deref() == Some(text) {
+                break;
+            }
+            if Instant::now() >= deadline {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+    #[cfg(target_os = "linux")]
     std::thread::sleep(Duration::from_millis(paste_delay_ms));
 
     // Send paste key combo
@@ -61,19 +93,36 @@ fn paste_via_clipboard(
         }
     }
 
-    std::thread::sleep(std::time::Duration::from_millis(50));
-
-    // Restore original clipboard content
-    // On Wayland, prefer wl-copy for better compatibility
+    // Restore the user's original clipboard — but NOT synchronously right after
+    // the paste keystroke. The target app reads the pasteboard asynchronously,
+    // and slow apps (Electron: Teams, Slack, VS Code) can take several hundred
+    // ms. A prompt restore overwrites our text before the app has read it, so
+    // the app pastes the previous clipboard instead of the dictation. Defer the
+    // restore to a background thread so the app has ample time and the paste
+    // pipeline isn't blocked.
     #[cfg(target_os = "linux")]
-    if is_wayland() && is_wl_copy_available() {
-        let _ = write_clipboard_via_wl_copy(&clipboard_content);
-    } else {
-        let _ = clipboard.write_text(&clipboard_content);
+    {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        // On Wayland, prefer wl-copy for better compatibility
+        if is_wayland() && is_wl_copy_available() {
+            let _ = write_clipboard_via_wl_copy(&clipboard_content);
+        } else {
+            let _ = clipboard.write_text(&clipboard_content);
+        }
     }
 
     #[cfg(not(target_os = "linux"))]
-    let _ = clipboard.write_text(&clipboard_content);
+    {
+        let app = app_handle.clone();
+        let original = clipboard_content.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(RESTORE_CLIPBOARD_DELAY_MS));
+            let restore_app = app.clone();
+            let _ = app.run_on_main_thread(move || {
+                let _ = restore_app.clipboard().write_text(original);
+            });
+        });
+    }
 
     Ok(())
 }
