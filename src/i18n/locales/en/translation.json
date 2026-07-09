@@ -491,6 +491,12 @@
           "description": "Off by default. Map an app to a cleanup mode. When that app is frontmost, its mode is applied automatically and overrides the automatic short/long selection — always shown in the overlay, never silent. A manual mode change takes over for the rest of the session."
         },
         "rules": {
+          "appNamePlaceholder": "App name (e.g. Slack)",
+          "lookup": {
+            "button": "Find bundle ID",
+            "notFound": "Couldn't find an app named \"{{name}}\". Check the spelling and make sure it's installed.",
+            "unsupported": "Looking up by app name is only available on macOS. Enter the process name instead."
+          },
           "bundleIdPlaceholder": "Bundle id (e.g. com.apple.mail)",
           "modePlaceholder": "Select a mode",
           "add": "Add rule",

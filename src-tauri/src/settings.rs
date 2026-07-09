@@ -109,14 +109,6 @@ pub struct Snippet {
     pub expansion: String,
 }
 
-/// Frontmost app name + bundle id, surfaced to Settings for a "use current
-/// app" detect button when building a per-app mode rule.
-#[derive(Serialize, Deserialize, Debug, Clone, Type)]
-pub struct FrontmostAppInfo {
-    pub name: String,
-    pub bundle_id: String,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct PostProcessProvider {
     pub id: String,

@@ -610,7 +610,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::set_post_process_selected_prompt,
             shortcut::change_per_app_auto_mode_enabled_setting,
             shortcut::update_per_app_mode_map_setting,
-            shortcut::get_frontmost_app,
+            shortcut::resolve_app_bundle_id,
             shortcut::update_snippets_setting,
             shortcut::change_style_card_enabled_setting,
             shortcut::update_style_card_setting,

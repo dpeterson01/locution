@@ -1084,14 +1084,52 @@ pub fn update_per_app_mode_map_setting(
     Ok(())
 }
 
-/// Detects the frontmost app for a Settings "use current app" button when
-/// building a per-app mode rule. Best-effort — returns `Ok(None)` (not an
-/// error) when detection fails, since that's an expected outcome, not a bug.
+/// Resolve an application's bundle identifier from its display name for the
+/// per-app rule builder. macOS only: `osascript` `id of app` resolves through
+/// LaunchServices against installed apps (no Apple event reaches the target,
+/// so no Automation prompt) and works whether or not the app is running. The
+/// name is passed as a script argument via `on run argv`, so a name containing
+/// quotes cannot break out of the script. Other platforms key per-app rules on
+/// the process name, so this returns `Err("unsupported_platform")` there.
+/// Returns `Err("not_found")` for an unknown or misspelled name.
 #[tauri::command]
 #[specta::specta]
-pub fn get_frontmost_app(app: AppHandle) -> Result<Option<settings::FrontmostAppInfo>, String> {
-    Ok(crate::context_capture::frontmost_app_info(&app)
-        .map(|(name, bundle_id)| settings::FrontmostAppInfo { name, bundle_id }))
+pub fn resolve_app_bundle_id(app_name: String) -> Result<String, String> {
+    let name = app_name.trim();
+    if name.is_empty() {
+        return Err("empty_name".to_string());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let output = std::process::Command::new("osascript")
+            .args([
+                "-e",
+                "on run argv",
+                "-e",
+                "return id of app (item 1 of argv)",
+                "-e",
+                "end run",
+                name,
+            ])
+            .output()
+            .map_err(|e| format!("osascript failed to run: {e}"))?;
+
+        if !output.status.success() {
+            return Err("not_found".to_string());
+        }
+        let id = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if id.is_empty() {
+            return Err("not_found".to_string());
+        }
+        Ok(id)
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = name;
+        Err("unsupported_platform".to_string())
+    }
 }
 
 #[tauri::command]

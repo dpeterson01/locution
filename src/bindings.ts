@@ -393,13 +393,18 @@ async updatePerAppModeMapSetting(map: Partial<{ [key in string]: string }>) : Pr
 }
 },
 /**
- * Detects the frontmost app for a Settings "use current app" button when
- * building a per-app mode rule. Best-effort — returns `Ok(None)` (not an
- * error) when detection fails, since that's an expected outcome, not a bug.
+ * Resolve an application's bundle identifier from its display name for the
+ * per-app rule builder. macOS only: `osascript` `id of app` resolves through
+ * LaunchServices against installed apps (no Apple event reaches the target,
+ * so no Automation prompt) and works whether or not the app is running. The
+ * name is passed as a script argument via `on run argv`, so a name containing
+ * quotes cannot break out of the script. Other platforms key per-app rules on
+ * the process name, so this returns `Err("unsupported_platform")` there.
+ * Returns `Err("not_found")` for an unknown or misspelled name.
  */
-async getFrontmostApp() : Promise<Result<FrontmostAppInfo | null, string>> {
+async resolveAppBundleId(appName: string) : Promise<Result<string, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_frontmost_app") };
+    return { status: "ok", data: await TAURI_INVOKE("resolve_app_bundle_id", { appName }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1175,11 +1180,6 @@ export type EngineType =
  * the file, so this one variant covers the whole transcribe-cpp family.
  */
 "TranscribeCpp" | "Parakeet" | "Moonshine" | "MoonshineStreaming" | "SenseVoice" | "GigaAM" | "Canary" | "Cohere"
-/**
- * Frontmost app name + bundle id, surfaced to Settings for a "use current
- * app" detect button when building a per-app mode rule.
- */
-export type FrontmostAppInfo = { name: string; bundle_id: string }
 export type GpuDeviceOption = { id: number; name: string; total_vram_mb: number }
 export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean; cleanup_mode_id: string | null; cleanup_mode_name: string | null; cleanup_model: string | null; cleanup_tier: string | null; cleanup_error: string | null }
 export type HistoryUpdatePayload = { action: "added"; entry: HistoryEntry } | { action: "updated"; entry: HistoryEntry } | { action: "deleted"; id: number } | { action: "toggled"; id: number }

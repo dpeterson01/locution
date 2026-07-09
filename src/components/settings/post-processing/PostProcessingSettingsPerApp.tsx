@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { commands } from "@/bindings";
 import { Dropdown, SettingsGroup, ToggleSwitch } from "@/components/ui";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
@@ -15,17 +16,50 @@ const PostProcessingSettingsPerAppComponent: React.FC = () => {
 
   const [bundleId, setBundleId] = useState("");
   const [modeId, setModeId] = useState<string | null>(prompts[0]?.id ?? null);
+  const [appName, setAppName] = useState("");
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupBusy, setLookupBusy] = useState(false);
 
   const modeOptions = prompts.map((p) => ({ value: p.id, label: p.name }));
 
   const modeName = (id: string | undefined) =>
     prompts.find((p) => p.id === id)?.name ?? id ?? "";
 
+  const handleLookup = async () => {
+    const name = appName.trim();
+    if (!name) return;
+    setLookupBusy(true);
+    setLookupError(null);
+    try {
+      const result = await commands.resolveAppBundleId(name);
+      if (result.status === "ok") {
+        setBundleId(result.data);
+        setAppName("");
+      } else {
+        setLookupError(
+          t(
+            result.error === "unsupported_platform"
+              ? "settings.postProcessing.perApp.rules.lookup.unsupported"
+              : "settings.postProcessing.perApp.rules.lookup.notFound",
+            { name },
+          ),
+        );
+      }
+    } catch {
+      setLookupError(
+        t("settings.postProcessing.perApp.rules.lookup.notFound", { name }),
+      );
+    } finally {
+      setLookupBusy(false);
+    }
+  };
+
   const handleAddRule = () => {
     const trimmed = bundleId.trim();
     if (!trimmed || !modeId) return;
     updateSetting("per_app_mode_map", { ...ruleMap, [trimmed]: modeId });
     setBundleId("");
+    setLookupError(null);
   };
 
   const handleRemoveRule = (id: string) => {
@@ -48,6 +82,33 @@ const PostProcessingSettingsPerAppComponent: React.FC = () => {
 
       {enabled && (
         <div className="settings-expand-in p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              value={appName}
+              onChange={(e) => setAppName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleLookup();
+              }}
+              placeholder={t(
+                "settings.postProcessing.perApp.rules.appNamePlaceholder",
+              )}
+              variant="compact"
+              className="flex-1 min-w-0"
+            />
+            <Button
+              onClick={handleLookup}
+              variant="secondary"
+              size="md"
+              disabled={!appName.trim() || lookupBusy}
+              className="shrink-0"
+            >
+              {t("settings.postProcessing.perApp.rules.lookup.button")}
+            </Button>
+          </div>
+
+          {lookupError && <p className="text-xs text-red-400">{lookupError}</p>}
+
           <div className="flex items-center gap-2">
             <Input
               type="text"
