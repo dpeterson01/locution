@@ -467,7 +467,9 @@
           "noNetwork": "ネットワークに接続できませんでした。",
           "retry": "再試行",
           "unknownModel": "「{{name}}」は Ollama が認識するモデルではありません。綴りを確認するか、<link>ollama.com/library</link> で有効なモデル名を探してください。",
-          "otherError": "このモデルのダウンロード中に問題が発生しました。"
+          "otherError": "このモデルのダウンロード中に問題が発生しました。",
+          "installed": "インストール済み",
+          "cannotVerify": "Ollama が実行されていないため、Locution はこのモデルがインストールされているかどうかを確認できません。"
         }
       },
       "context": {

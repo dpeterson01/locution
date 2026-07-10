@@ -467,7 +467,9 @@
           "noNetwork": "无法连接网络。",
           "retry": "重试",
           "unknownModel": "“{{name}}”不是 Ollama 识别的模型。请检查拼写，或在 <link>ollama.com/library</link> 查找有效的模型名称。",
-          "otherError": "下载此模型时出错。"
+          "otherError": "下载此模型时出错。",
+          "installed": "已安装",
+          "cannotVerify": "Ollama 未运行，因此 Locution 无法验证是否已安装此模型。"
         }
       },
       "context": {

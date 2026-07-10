@@ -467,7 +467,9 @@
           "noNetwork": "Impossible d'atteindre le réseau.",
           "retry": "Réessayer",
           "unknownModel": "« {{name}} » n'est pas un modèle reconnu par Ollama. Vérifiez l'orthographe ou trouvez des noms de modèles valides sur <link>ollama.com/library</link>.",
-          "otherError": "Une erreur s'est produite lors du téléchargement de ce modèle."
+          "otherError": "Une erreur s'est produite lors du téléchargement de ce modèle.",
+          "installed": "Installé",
+          "cannotVerify": "Ollama n'est pas en cours d'exécution, donc Locution ne peut pas vérifier si ce modèle est installé."
         }
       },
       "context": {

@@ -467,7 +467,9 @@
           "noNetwork": "Couldn't reach the network.",
           "retry": "Retry",
           "unknownModel": "\"{{name}}\" isn't a model Ollama recognizes. Check the spelling, or find valid model names at <link>ollama.com/library</link>.",
-          "otherError": "Something went wrong pulling this model."
+          "otherError": "Something went wrong pulling this model.",
+          "installed": "Installed",
+          "cannotVerify": "Ollama isn't running, so Locution can't verify whether this model is installed."
         }
       },
       "context": {

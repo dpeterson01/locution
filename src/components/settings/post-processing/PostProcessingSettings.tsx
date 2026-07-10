@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Download, Loader2, RefreshCcw } from "lucide-react";
-import { commands } from "@/bindings";
+import { Check, Download, Loader2, RefreshCcw } from "lucide-react";
+import { commands, type OllamaAvailability } from "@/bindings";
 import { useOllamaModelPull } from "../../../hooks/useOllamaModelPull";
 
 import {
@@ -475,17 +475,27 @@ const TierModelField: React.FC<{
 }) => {
   const { t } = useTranslation();
   const [modelsPresent, setModelsPresent] = useState<string[]>([]);
+  // null until the first probe resolves — lets us show a neutral "checking"
+  // state instead of a misleading download button before we know Ollama's
+  // status. An empty models_present means "not installed" ONLY when running;
+  // when the daemon is down /api/tags returns nothing, which is "can't verify".
+  const [availability, setAvailability] = useState<OllamaAvailability | null>(
+    null,
+  );
   const modelDownload = useOllamaModelPull();
   const pullingModelRef = useRef<string>("");
 
   useEffect(() => {
     commands.probeOllamaSetup().then((result) => {
       setModelsPresent(result.models_present);
+      setAvailability(result.availability);
     });
   }, []);
 
   useEffect(() => {
     if (modelDownload.state.status === "present") {
+      // A successful pull implies Ollama is running.
+      setAvailability("running");
       setModelsPresent((prev) =>
         prev.includes(value.trim()) ? prev : [...prev, value.trim()],
       );
@@ -493,7 +503,15 @@ const TierModelField: React.FC<{
   }, [modelDownload.state.status]);
 
   const trimmed = value.trim();
-  const modelPresent = trimmed === "" || modelsPresent.includes(trimmed);
+  // Ollama reports fully-qualified `name:tag` from /api/tags; a bare name the
+  // user typed (or a default) implies the `:latest` tag. Normalize both sides
+  // so `llama3.2` matches an installed `llama3.2:latest` (and vice versa).
+  const normalizeTag = (m: string) => (m.includes(":") ? m : `${m}:latest`);
+  const modelPresent =
+    trimmed === "" ||
+    modelsPresent.some((m) => normalizeTag(m) === normalizeTag(trimmed));
+  const ollamaRunning = availability === "running";
+  const probeComplete = availability !== null;
   const downloadIsForCurrent = pullingModelRef.current === trimmed;
   const downloadState = downloadIsForCurrent
     ? modelDownload.state
@@ -529,16 +547,50 @@ const TierModelField: React.FC<{
         {trailing}
       </div>
 
-      {!modelPresent && downloadState.status === "idle" && (
-        <Button
-          onClick={handleStartDownload}
-          variant="secondary"
-          size="sm"
-          className="self-start"
-        >
-          <Download className="w-3.5 h-3.5 mr-1.5" />
-          {t("settings.postProcessing.adaptive.download.button")}
-        </Button>
+      {downloadState.status === "idle" && trimmed !== "" && (
+        <>
+          {!probeComplete && (
+            <div className="flex items-center gap-2 text-xs text-mid-gray/70">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              {t("settings.postProcessing.adaptive.download.checking")}
+            </div>
+          )}
+
+          {probeComplete && ollamaRunning && modelPresent && (
+            <div className="flex items-center gap-1.5 text-xs text-mid-gray/70">
+              <Check className="w-3.5 h-3.5 text-green-500" />
+              {t("settings.postProcessing.adaptive.download.installed")}
+            </div>
+          )}
+
+          {probeComplete && ollamaRunning && !modelPresent && (
+            <Button
+              onClick={handleStartDownload}
+              variant="secondary"
+              size="sm"
+              className="self-start"
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              {t("settings.postProcessing.adaptive.download.button")}
+            </Button>
+          )}
+
+          {probeComplete && !ollamaRunning && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-mid-gray/70">
+                {t("settings.postProcessing.adaptive.download.cannotVerify")}
+              </p>
+              <Button
+                onClick={handleStartOllamaThenDownload}
+                variant="secondary"
+                size="sm"
+                className="self-start"
+              >
+                {t("settings.postProcessing.adaptive.download.startOllama")}
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {downloadState.status === "checking" && (

@@ -467,7 +467,9 @@
           "noNetwork": "Netzwerk nicht erreichbar.",
           "retry": "Erneut versuchen",
           "unknownModel": "„{{name}}“ ist kein Modell, das Ollama kennt. Prüfe die Schreibweise oder finde gültige Modellnamen unter <link>ollama.com/library</link>.",
-          "otherError": "Beim Herunterladen dieses Modells ist etwas schiefgelaufen."
+          "otherError": "Beim Herunterladen dieses Modells ist etwas schiefgelaufen.",
+          "installed": "Installiert",
+          "cannotVerify": "Ollama läuft nicht, daher kann Locution nicht überprüfen, ob dieses Modell installiert ist."
         }
       },
       "context": {
