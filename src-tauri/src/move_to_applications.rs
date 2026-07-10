@@ -101,7 +101,9 @@ pub fn maybe_prompt(app: &tauri::AppHandle) {
         }
 
         // Launch the freshly installed copy, then quit this one.
-        let _ = std::process::Command::new("/usr/bin/open").arg(DEST).spawn();
+        let _ = std::process::Command::new("/usr/bin/open")
+            .arg(DEST)
+            .spawn();
         app.exit(0);
     });
 }

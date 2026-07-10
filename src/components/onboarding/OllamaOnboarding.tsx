@@ -64,7 +64,10 @@ const MIN_TRANSIENT_PHASE_MS = 500;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /// Runs `work`, then waits out whatever remains of `minMs` since it started.
-async function withMinDuration<T>(minMs: number, work: () => Promise<T>): Promise<T> {
+async function withMinDuration<T>(
+  minMs: number,
+  work: () => Promise<T>,
+): Promise<T> {
   const start = Date.now();
   const result = await work();
   const elapsed = Date.now() - start;
@@ -125,34 +128,31 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
   // inline download (useOllamaModelPull); this row keeps its own simpler
   // present/interrupted/disk_full states since Ollama's running-state is
   // already resolved once, wizard-wide, before any row starts pulling.
-  const pullOneModel = useCallback(
-    async (model: string, runId: number) => {
-      setModelRows((prev) => ({
-        ...prev,
-        [model]: { state: "pulling", percentage: 0 },
-      }));
+  const pullOneModel = useCallback(async (model: string, runId: number) => {
+    setModelRows((prev) => ({
+      ...prev,
+      [model]: { state: "pulling", percentage: 0 },
+    }));
 
-      const outcome = await pullModelWithProgress(
-        model,
-        () => runId !== runIdRef.current,
-        (percentage) =>
-          setModelRows((prev) => ({
-            ...prev,
-            [model]: { state: "pulling", percentage },
-          })),
-      );
-      if (!outcome) return; // stale run
+    const outcome = await pullModelWithProgress(
+      model,
+      () => runId !== runIdRef.current,
+      (percentage) =>
+        setModelRows((prev) => ({
+          ...prev,
+          [model]: { state: "pulling", percentage },
+        })),
+    );
+    if (!outcome) return; // stale run
 
-      const nextState: ModelState =
-        outcome.status === "present"
-          ? "present"
-          : outcome.status === "disk_full"
-            ? "disk_full"
-            : "interrupted";
-      setModelRows((prev) => ({ ...prev, [model]: { state: nextState } }));
-    },
-    [],
-  );
+    const nextState: ModelState =
+      outcome.status === "present"
+        ? "present"
+        : outcome.status === "disk_full"
+          ? "disk_full"
+          : "interrupted";
+    setModelRows((prev) => ({ ...prev, [model]: { state: nextState } }));
+  }, []);
 
   const autoConfigure = useCallback(async () => {
     if (autoConfiguredRunRef.current === runIdRef.current) return;
@@ -242,7 +242,11 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
       return;
     }
 
-    setPhase(probe.availability === "installed_not_running" ? "starting" : "installing");
+    setPhase(
+      probe.availability === "installed_not_running"
+        ? "starting"
+        : "installing",
+    );
     const result = await commands.installAndStartOllama();
     if (runId !== runIdRef.current) return;
 
@@ -367,9 +371,7 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
             <h2 className="text-xl font-semibold text-text mb-2">
               {t("onboarding.ollama.title")}
             </h2>
-            <p className="text-text/70">
-              {t("onboarding.ollama.description")}
-            </p>
+            <p className="text-text/70">{t("onboarding.ollama.description")}</p>
           </div>
         )}
 
@@ -429,7 +431,8 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
                     </div>
                   )}
 
-                  {(row.state === "interrupted" || row.state === "disk_full") && (
+                  {(row.state === "interrupted" ||
+                    row.state === "disk_full") && (
                     <div className="flex flex-col gap-2">
                       <p className="text-xs text-text/60">
                         {t(`onboarding.ollama.model.${row.state}`)}

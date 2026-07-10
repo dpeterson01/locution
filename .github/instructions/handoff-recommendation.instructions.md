@@ -26,6 +26,7 @@ Check these at the end of a turn, not mid-task:
 Surface a recommendation when **two or more** signals fire, or when the user clearly signals stepping away. Cap at **once per session**. If the user declines, do not raise it again that session.
 
 Do **not** recommend when:
+
 - The user is mid-flow on a single task with no parked threads.
 - Only one weak signal is present.
 - The user already declined this session.
@@ -47,9 +48,9 @@ Save to `.local/handoffs/YYYY-MM-DD-<slug>.md`. Pass along the focus (whole sess
 
 ## Rationalization table
 
-| The thought | The reality |
-| --- | --- |
-| "A handoff is clearly useful here, I'll just write it." | Useful is not approved. Offer first. |
-| "I'll stage a draft so acceptance is instant." | Staging is still creating. No file until the user says yes. |
-| "The session is long, that's enough." | Long does not mean done. One weak signal under-justifies the interruption. |
-| "I already offered and they said no, but now it's even longer." | One offer per session. Re-raising is nagging. |
+| The thought                                                     | The reality                                                                |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| "A handoff is clearly useful here, I'll just write it."         | Useful is not approved. Offer first.                                       |
+| "I'll stage a draft so acceptance is instant."                  | Staging is still creating. No file until the user says yes.                |
+| "The session is long, that's enough."                           | Long does not mean done. One weak signal under-justifies the interruption. |
+| "I already offered and they said no, but now it's even longer." | One offer per session. Re-raising is nagging.                              |

@@ -40,7 +40,10 @@ export const DebugSettings: React.FC = () => {
             <PasteDelay descriptionMode="tooltip" grouped={true} />
             <RecordingBuffer descriptionMode="tooltip" grouped={true} />
             <AlwaysOnMicrophone descriptionMode="tooltip" grouped={true} />
-            <ClamshellMicrophoneSelector descriptionMode="tooltip" grouped={true} />
+            <ClamshellMicrophoneSelector
+              descriptionMode="tooltip"
+              grouped={true}
+            />
             <LiveLogViewer descriptionMode="tooltip" grouped={true} />
             <ExportDiagnostics descriptionMode="tooltip" grouped={true} />
           </div>

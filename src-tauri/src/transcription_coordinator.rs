@@ -68,7 +68,10 @@ impl TranscriptionCoordinator {
                             // Releases always pass through for push-to-talk.
                             if is_pressed {
                                 let now = Instant::now();
-                                if last_press.get(&binding_id).is_some_and(|t| now.duration_since(*t) < DEBOUNCE) {
+                                if last_press
+                                    .get(&binding_id)
+                                    .is_some_and(|t| now.duration_since(*t) < DEBOUNCE)
+                                {
                                     debug!("Debounced press for '{binding_id}'");
                                     continue;
                                 }

@@ -37,7 +37,9 @@ function mapSetupError(error: OllamaSetupError): PullOutcome {
       return { status: "interrupted" };
     case "other": {
       const lower = error.detail.toLowerCase();
-      const isUnknownModel = UNKNOWN_MODEL_PATTERNS.some((p) => lower.includes(p));
+      const isUnknownModel = UNKNOWN_MODEL_PATTERNS.some((p) =>
+        lower.includes(p),
+      );
       return { status: isUnknownModel ? "unknown_model" : "other_error" };
     }
     default:
@@ -78,7 +80,9 @@ export async function pullModelWithProgress(
   unlisten();
   if (isStale()) return undefined;
 
-  return result.status === "ok" ? { status: "present" } : mapSetupError(result.error);
+  return result.status === "ok"
+    ? { status: "present" }
+    : mapSetupError(result.error);
 }
 
 /// Lifecycle for the cleanup mode editor's inline "Download" affordance:

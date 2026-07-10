@@ -348,8 +348,12 @@ mod windows_impl {
 
         let mut buf = vec![0u16; PATH_BUF_LEN];
         let mut size = buf.len() as u32;
-        let query =
-            QueryFullProcessImageNameW(handle, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &mut size);
+        let query = QueryFullProcessImageNameW(
+            handle,
+            PROCESS_NAME_WIN32,
+            PWSTR(buf.as_mut_ptr()),
+            &mut size,
+        );
         let _ = CloseHandle(handle);
 
         query.ok()?;

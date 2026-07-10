@@ -12,7 +12,7 @@ A lightweight, append-only error log at `.local/error-log.jsonl` captures failur
 Append an entry when **both** are true:
 
 1. A tool call returned an error or an unexpected result, **and**
-2. Recovering required a *change in approach*: a different tool, a corrected command, a schema lookup, a routing fix, or it exposed a knowledge or process gap.
+2. Recovering required a _change in approach_: a different tool, a corrected command, a schema lookup, a routing fix, or it exposed a knowledge or process gap.
 
 This filter keeps the log high-signal. Examples that **qualify**:
 
@@ -52,7 +52,7 @@ Field rules:
 - `tool`: the tool or command that failed.
 - `skill`: the active skill or workflow if one was running, else `null`.
 - `error_class`: one of `auth`, `permission`, `cargo-compile`, `tsc-error`, `bindings-regen`, `subagent-hallucination`, `json-parse`, `timeout`, `tool-misuse`, `scope-violation`, `other`. Add a value only when none fits.
-- `what`: one line on what you were trying to do. Describe the *shape*, not the data.
+- `what`: one line on what you were trying to do. Describe the _shape_, not the data.
 - `root_cause`: best understanding of why it failed.
 - `fix`: what resolved it or the workaround used.
 - `area`: repo path or domain if relevant, else `null`.

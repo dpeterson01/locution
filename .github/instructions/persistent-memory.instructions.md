@@ -9,12 +9,12 @@ This repo has a four-file per-machine memory pack at `.local/memory/`. The direc
 
 ## The four files
 
-| File | Read for | Written by |
-| --- | --- | --- |
-| `.local/memory/recent-context.md` | Picking up where the last session left off; open threads and deferred decisions | Agent after substantive work (see Write rules) |
-| `.local/memory/preferences.md` | Workflow rules, prose standards, release holds | Derek only. Never overwrite without explicit "remember this." |
-| `.local/memory/project-context.md` | Repo facts, build commands, verified gotchas, bindings contract | Derek or agent when new gotchas are confirmed |
-| `.local/memory/roster.md` | Owner info, SSH alias, upstream | Rarely changes |
+| File                               | Read for                                                                        | Written by                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `.local/memory/recent-context.md`  | Picking up where the last session left off; open threads and deferred decisions | Agent after substantive work (see Write rules)                |
+| `.local/memory/preferences.md`     | Workflow rules, prose standards, release holds                                  | Derek only. Never overwrite without explicit "remember this." |
+| `.local/memory/project-context.md` | Repo facts, build commands, verified gotchas, bindings contract                 | Derek or agent when new gotchas are confirmed                 |
+| `.local/memory/roster.md`          | Owner info, SSH alias, upstream                                                 | Rarely changes                                                |
 
 ## Read rules
 

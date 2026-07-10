@@ -21,6 +21,7 @@ Locution is a fully-local macOS dictation app: global hotkey → mic capture →
 ## Memory startup
 
 At session start, read:
+
 - `.local/memory/preferences.md` — workflow rules and release holds
 - `.local/memory/recent-context.md` — active focus, open threads, recent milestones
 - `.local/memory/project-context.md` — repo facts, build commands, verified gotchas

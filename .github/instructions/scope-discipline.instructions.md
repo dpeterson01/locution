@@ -16,6 +16,7 @@ State what you plan to touch and why, then wait. If the user did not reference a
 ## The done-gate
 
 Before calling a task complete, run this check:
+
 1. List every file you changed.
 2. For each file, confirm it was explicitly in scope.
 3. If any file was not in scope, explain why you touched it and ask if it should be reverted.
@@ -38,12 +39,12 @@ Before calling a task complete, run this check:
 
 ## Rationalization table
 
-| The thought | The reality |
-| --- | --- |
-| "It's a tiny related fix, I'll just include it." | Tiny or not, the user did not ask for it. Surface it, don't smuggle it. |
-| "While I'm in this file I'll clean it up." | Proximity is not permission. Edit what was asked; note the rest. |
-| "The wording was clearly stale, fixing it is obviously right." | If it's that obvious, it's a one-line ask. Mention it. |
-| "Reverting the extra change wastes a step." | The user catching it, asking why, and requesting the revert wastes more. |
+| The thought                                                    | The reality                                                              |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| "It's a tiny related fix, I'll just include it."               | Tiny or not, the user did not ask for it. Surface it, don't smuggle it.  |
+| "While I'm in this file I'll clean it up."                     | Proximity is not permission. Edit what was asked; note the rest.         |
+| "The wording was clearly stale, fixing it is obviously right." | If it's that obvious, it's a one-line ask. Mention it.                   |
+| "Reverting the extra change wastes a step."                    | The user catching it, asking why, and requesting the revert wastes more. |
 
 ## Related
 

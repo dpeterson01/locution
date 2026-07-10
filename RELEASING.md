@@ -18,9 +18,9 @@ Actions secrets. They are never stored in the repo.
 
 Set these in the repo settings (Settings → Secrets and variables → Actions):
 
-| Secret | Value |
-| --- | --- |
-| `TAURI_SIGNING_PRIVATE_KEY` | Full contents of `~/.tauri/locution.key` |
+| Secret                               | Value                                         |
+| ------------------------------------ | --------------------------------------------- |
+| `TAURI_SIGNING_PRIVATE_KEY`          | Full contents of `~/.tauri/locution.key`      |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | The passphrase set when the key was generated |
 
 ### Regenerating the key (only if lost or rotating)

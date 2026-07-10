@@ -11,16 +11,16 @@ Do not claim an action is done until you have observed evidence that it succeede
 
 ## What counts as evidence
 
-| Claim | Required evidence before stating it |
-| --- | --- |
+| Claim                   | Required evidence before stating it                                                          |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
 | "File created / edited" | The edit tool reported success and the target reflects the change (read it back or diff it). |
-| "Build passed" | The build command returned exit 0. Paste the relevant output line. |
-| "Types check" | `bunx tsc --noEmit` returned exit 0 with no errors listed. |
-| "Lint passed" | `bun run lint` returned exit 0. |
-| "Cargo checks" | `cargo check` or `cargo clippy` returned exit 0. |
-| "Bindings up to date" | `git diff src/bindings.ts` shows only intentional changes after `cargo run`. |
-| "Commit made" | `git log --oneline -1` shows the expected commit message. |
-| "No unresolved markers" | You searched for `[NEEDS CLARIFICATION:` and found none. |
+| "Build passed"          | The build command returned exit 0. Paste the relevant output line.                           |
+| "Types check"           | `bunx tsc --noEmit` returned exit 0 with no errors listed.                                   |
+| "Lint passed"           | `bun run lint` returned exit 0.                                                              |
+| "Cargo checks"          | `cargo check` or `cargo clippy` returned exit 0.                                             |
+| "Bindings up to date"   | `git diff src/bindings.ts` shows only intentional changes after `cargo run`.                 |
+| "Commit made"           | `git log --oneline -1` shows the expected commit message.                                    |
+| "No unresolved markers" | You searched for `[NEEDS CLARIFICATION:` and found none.                                     |
 
 ## Gate function
 
@@ -28,12 +28,12 @@ Before writing a completion statement, ask: _what did I observe that proves this
 
 ## Rationalization table
 
-| The thought | The reality |
-| --- | --- |
-| "The tool call almost certainly worked, I'll say it's done." | Tool calls fail silently. Read the result. |
-| "Re-reading the file wastes a step." | One read is cheaper than a wrong status. Do it. |
-| "The user is in a hurry, skip the check." | A confident wrong claim costs more time than the check. |
-| "I'll describe the read-back I would have done." | Narrating a check you did not run is worse than the unverified claim. If you did not run it, do not write its result. |
+| The thought                                                  | The reality                                                                                                           |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| "The tool call almost certainly worked, I'll say it's done." | Tool calls fail silently. Read the result.                                                                            |
+| "Re-reading the file wastes a step."                         | One read is cheaper than a wrong status. Do it.                                                                       |
+| "The user is in a hurry, skip the check."                    | A confident wrong claim costs more time than the check.                                                               |
+| "I'll describe the read-back I would have done."             | Narrating a check you did not run is worse than the unverified claim. If you did not run it, do not write its result. |
 
 ## Do not fabricate the verification
 

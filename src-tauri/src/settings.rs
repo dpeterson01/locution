@@ -794,8 +794,7 @@ pub(crate) const DEFAULT_MODE_ID: &str = "mode_short_dictation";
 /// editable but never deletable, since the default path depends on them.
 pub(crate) const SHORT_DICTATION_MODE_ID: &str = "mode_short_dictation";
 pub(crate) const LONG_DICTATION_MODE_ID: &str = "mode_long_dictation";
-pub(crate) const PROTECTED_MODE_IDS: [&str; 2] =
-    [SHORT_DICTATION_MODE_ID, LONG_DICTATION_MODE_ID];
+pub(crate) const PROTECTED_MODE_IDS: [&str; 2] = [SHORT_DICTATION_MODE_ID, LONG_DICTATION_MODE_ID];
 
 /// Default modes. The first two (Short/Long Dictation) are the adaptive tiers
 /// used by length when no per-app rule matches. The rest are per-app category
@@ -884,7 +883,10 @@ fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
         .post_process_providers
         .retain(|p| p.id != "apple_intelligence");
     if settings.post_process_providers.len() != before {
-        settings.post_process_api_keys.0.remove("apple_intelligence");
+        settings
+            .post_process_api_keys
+            .0
+            .remove("apple_intelligence");
         settings.post_process_models.remove("apple_intelligence");
         if settings.post_process_provider_id == "apple_intelligence" {
             settings.post_process_provider_id = default_post_process_provider_id();
@@ -1005,7 +1007,10 @@ fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
         .retain(|p| !RETIRED_MODE_IDS.contains(&p.id.as_str()));
     for mode in default_post_process_prompts() {
         let protected = PROTECTED_MODE_IDS.contains(&mode.id.as_str());
-        let present = settings.post_process_prompts.iter().any(|p| p.id == mode.id);
+        let present = settings
+            .post_process_prompts
+            .iter()
+            .any(|p| p.id == mode.id);
         if protected && !present {
             settings.post_process_prompts.push(mode);
         }

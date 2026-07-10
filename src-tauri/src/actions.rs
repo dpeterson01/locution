@@ -616,7 +616,10 @@ async fn post_process_transcription(
     } else {
         (prompt.replace("${output}", transcription), None)
     };
-    debug!("Processed prompt length: {} chars", legacy_user_content.len());
+    debug!(
+        "Processed prompt length: {} chars",
+        legacy_user_content.len()
+    );
 
     match crate::llm_client::send_chat_completion_with_schema(
         &provider,

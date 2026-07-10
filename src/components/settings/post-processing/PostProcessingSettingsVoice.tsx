@@ -66,54 +66,56 @@ const PostProcessingSettingsVoiceComponent: React.FC = () => {
 
       {styleCardEnabled && (
         <div className="settings-expand-in space-y-2 flex flex-col p-4">
-        <label className="text-sm font-semibold">
-          {t("settings.postProcessing.voice.card.textLabel")}
-        </label>
-        <Textarea
-          value={draftCard}
-          onChange={(e) => setDraftCard(e.target.value)}
-          placeholder={t("settings.postProcessing.voice.card.textPlaceholder")}
-          disabled={!styleCardEnabled}
-        />
-        <div className="flex gap-2 pt-1">
-          <Button
-            onClick={handleSaveCard}
-            variant="primary"
-            size="md"
-            disabled={!cardDirty || isUpdating("style_card")}
-          >
-            {t("settings.postProcessing.voice.card.save")}
-          </Button>
-        </div>
-
-        <div className="border-t border-mid-gray/20 pt-4 mt-2 space-y-2">
           <label className="text-sm font-semibold">
-            {t("settings.postProcessing.voice.card.distill.label")}
+            {t("settings.postProcessing.voice.card.textLabel")}
           </label>
-          <p className="text-xs text-mid-gray/70">
-            {t("settings.postProcessing.voice.card.distill.description")}
-          </p>
           <Textarea
-            value={samples}
-            onChange={(e) => setSamples(e.target.value)}
+            value={draftCard}
+            onChange={(e) => setDraftCard(e.target.value)}
             placeholder={t(
-              "settings.postProcessing.voice.card.distill.placeholder",
+              "settings.postProcessing.voice.card.textPlaceholder",
             )}
-            disabled={isDistilling}
-            className="w-full"
+            disabled={!styleCardEnabled}
           />
-          <Button
-            onClick={handleDistill}
-            variant="secondary"
-            size="md"
-            disabled={isDistilling || !samples.trim()}
-          >
-            {isDistilling
-              ? t("settings.postProcessing.voice.card.distill.distilling")
-              : t("settings.postProcessing.voice.card.distill.button")}
-          </Button>
+          <div className="flex gap-2 pt-1">
+            <Button
+              onClick={handleSaveCard}
+              variant="primary"
+              size="md"
+              disabled={!cardDirty || isUpdating("style_card")}
+            >
+              {t("settings.postProcessing.voice.card.save")}
+            </Button>
+          </div>
+
+          <div className="border-t border-mid-gray/20 pt-4 mt-2 space-y-2">
+            <label className="text-sm font-semibold">
+              {t("settings.postProcessing.voice.card.distill.label")}
+            </label>
+            <p className="text-xs text-mid-gray/70">
+              {t("settings.postProcessing.voice.card.distill.description")}
+            </p>
+            <Textarea
+              value={samples}
+              onChange={(e) => setSamples(e.target.value)}
+              placeholder={t(
+                "settings.postProcessing.voice.card.distill.placeholder",
+              )}
+              disabled={isDistilling}
+              className="w-full"
+            />
+            <Button
+              onClick={handleDistill}
+              variant="secondary"
+              size="md"
+              disabled={isDistilling || !samples.trim()}
+            >
+              {isDistilling
+                ? t("settings.postProcessing.voice.card.distill.distilling")
+                : t("settings.postProcessing.voice.card.distill.button")}
+            </Button>
+          </div>
         </div>
-      </div>
       )}
     </SettingsGroup>
   );

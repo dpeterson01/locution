@@ -35,12 +35,12 @@ The question must be specific enough that Derek can answer it in one sentence.
 
 ## Rationalization table
 
-| The thought | The reality |
-| --- | --- |
-| "A reasonable default is obvious here, I'll just write it." | If the default affects scope or behavior, a wrong guess ships as fact. Mark it. |
-| "Marking this makes the draft look unfinished." | An honest gap is finishable. A plausible fabrication is a landmine. |
-| "I'll infer it from context and move on." | Inference is exactly where drift starts. If the source doesn't state it, mark it. |
-| "Derek will catch it if I'm wrong." | The marker is the catch. Removing it transfers your uncertainty into his blind spot. |
+| The thought                                                 | The reality                                                                          |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| "A reasonable default is obvious here, I'll just write it." | If the default affects scope or behavior, a wrong guess ships as fact. Mark it.      |
+| "Marking this makes the draft look unfinished."             | An honest gap is finishable. A plausible fabrication is a landmine.                  |
+| "I'll infer it from context and move on."                   | Inference is exactly where drift starts. If the source doesn't state it, mark it.    |
+| "Derek will catch it if I'm wrong."                         | The marker is the catch. Removing it transfers your uncertainty into his blind spot. |
 
 ## Effects
 
