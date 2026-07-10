@@ -1394,11 +1394,10 @@ impl ShortcutAction for CycleModeAction {
         let next = (current + 1) % settings.post_process_prompts.len();
         let next_id = settings.post_process_prompts[next].id.clone();
         let next_name = settings.post_process_prompts[next].name.clone();
-        // Routed through the same command the Settings dropdown/tray/overlay
-        // Modes popover use — a hotkey cycle is a manual switch too, so it
-        // must mark the manual-override flag the same way they do, or a
-        // per-app rule could silently flip the mode right back on the next
-        // app switch.
+        // Routed through the same command the tray and overlay Modes popover
+        // use — a hotkey cycle is a manual switch too. While per-app auto mode
+        // is on this registers a transient override that the next app switch
+        // clears; with auto mode off it persists as the selected mode.
         match crate::shortcut::set_post_process_selected_prompt(app.clone(), next_id.clone()) {
             Ok(()) => debug!("Cycled cleanup mode to '{}' ({})", next_name, next_id),
             Err(e) => debug!("Cycle mode failed to apply '{}': {}", next_id, e),

@@ -55,6 +55,12 @@ const MENU_CHROME_H = 54 + 18; // controls row + popover padding/gap
 
 type ModeEntry = { id: string; name: string; model: string | null };
 
+// The two protected adaptive-tier modes run length-based cleanup (the Short vs
+// Long tier is chosen when you dictate, not now), so the resting pill can't
+// honestly name one — it shows "Auto" instead. Mirror of PROTECTED_MODE_IDS in
+// src-tauri/src/settings.rs.
+const ADAPTIVE_MODE_IDS = ["mode_short_dictation", "mode_long_dictation"];
+
 const RecordingOverlay: React.FC = () => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
@@ -96,11 +102,6 @@ const RecordingOverlay: React.FC = () => {
   const [modes, setModes] = useState<ModeEntry[]>([]);
   const [selectedModeId, setSelectedModeId] = useState<string | null>(null);
   const [overlayStyle, setOverlayStyle] = useState<string>("minimal");
-  // Per-app auto-mode gates the at-rest mode label: under a rule the user
-  // didn't pick the mode, so the resting pill must name it ("never silent").
-  // With auto-mode off the manual pick is the user's own, and the hover-row
-  // badge is enough — the minimal dash pill stays untouched.
-  const [perAppAutoMode, setPerAppAutoMode] = useState(false);
   // Measured width of the labeled idle pill, so the native window can hug it
   // (see the SIZE_IDLE comment: transparent windows swallow clicks).
   const idlePillRef = useRef<HTMLDivElement>(null);
@@ -132,7 +133,6 @@ const RecordingOverlay: React.FC = () => {
         // immediately instead of on the next show-overlay event.
         setPosition(s.overlay_position === "top" ? "top" : "bottom");
         setOverlayStyle((s.overlay_style as string) ?? "minimal");
-        setPerAppAutoMode(s.per_app_auto_mode_enabled ?? false);
       }
     } catch {
       // Keep previous mode state if settings can't be read.
@@ -232,8 +232,17 @@ const RecordingOverlay: React.FC = () => {
   // checkmark, and (under auto-mode) the at-rest label. Derived before the
   // sizing effects below, which need it.
   const selectedMode = modes.find((m) => m.id === selectedModeId);
-  // The at-rest pill carries the mode name only under per-app auto-mode.
-  const idleLabeled = perAppAutoMode && !!selectedMode;
+  // The two protected adaptive-tier modes run length-based cleanup, so the pill
+  // shows "Auto" for them rather than a name that is only half the time right.
+  const isAdaptiveMode =
+    !!selectedMode && ADAPTIVE_MODE_IDS.includes(selectedMode.id);
+  const modeDisplayName = selectedMode
+    ? isAdaptiveMode
+      ? t("overlay.mode.auto")
+      : selectedMode.name
+    : "";
+  // The at-rest pill carries the mode name only under the Live overlay style.
+  const idleLabeled = overlayStyle === "live" && !!selectedMode;
 
   // Measure the labeled idle pill so the resize effect can size the native
   // window to hug it — width follows the mode name instead of a fixed wider
@@ -243,7 +252,7 @@ const RecordingOverlay: React.FC = () => {
     if (!el) return;
     const w = Math.ceil(el.offsetWidth);
     if (w > 0) setIdlePillW((prev) => (prev === w ? prev : w));
-  }, [state, hovering, menuOpen, idleLabeled, selectedMode?.name]);
+  }, [state, hovering, menuOpen, idleLabeled, modeDisplayName]);
 
   // Window footprint follows the interaction state. The mode popover needs the
   // tallest window; hover needs the controls row; idle shrinks back to the
@@ -438,10 +447,10 @@ const RecordingOverlay: React.FC = () => {
   const modeLabel = selectedMode && (
     <span
       className="sctrl-mode-label"
-      title={t("overlay.mode.activeHint", { name: selectedMode.name })}
-      aria-label={t("overlay.mode.activeHint", { name: selectedMode.name })}
+      title={t("overlay.mode.activeHint", { name: modeDisplayName })}
+      aria-label={t("overlay.mode.activeHint", { name: modeDisplayName })}
     >
-      {selectedMode.name.charAt(0).toUpperCase()}
+      {modeDisplayName.charAt(0).toUpperCase()}
     </span>
   );
 
@@ -690,19 +699,19 @@ const RecordingOverlay: React.FC = () => {
           {hovering ? (
             <div className="scard sctrl-card">{controlsRow}</div>
           ) : idleLabeled && selectedMode ? (
-            // Auto-mode is on: a per-app rule picked (or will pick) the mode,
-            // so the resting pill names it — "never silent" without hover.
-            // Shows the currently-active mode; rules apply at recording start.
+            // Live overlay style: the resting pill names the active mode so it's
+            // visible without hover. Protected adaptive-tier modes show "Auto"
+            // because the Short/Long tier is only decided when you dictate.
             <div
               ref={idlePillRef}
               className="sidle labeled"
-              title={t("overlay.mode.activeHint", { name: selectedMode.name })}
+              title={t("overlay.mode.activeHint", { name: modeDisplayName })}
               aria-label={t("overlay.mode.activeHint", {
-                name: selectedMode.name,
+                name: modeDisplayName,
               })}
             >
               <span className="sidle-dash" />
-              <span className="sidle-mode-name">{selectedMode.name}</span>
+              <span className="sidle-mode-name">{modeDisplayName}</span>
             </div>
           ) : (
             <div className="sidle" aria-label={t("overlay.idleHint")}>

@@ -781,7 +781,8 @@
     "transcribed": "전사됨",
     "cleanupFailed": "정리 실패",
     "mode": {
-      "activeHint": "모드: {{name}}"
+      "activeHint": "모드: {{name}}",
+      "auto": "자동"
     }
   },
   "whatsNew": {

@@ -784,7 +784,8 @@
       "collapse": "Collapse overlay"
     },
     "mode": {
-      "activeHint": "Mode: {{name}}"
+      "activeHint": "Mode: {{name}}",
+      "auto": "Auto"
     }
   }
 }

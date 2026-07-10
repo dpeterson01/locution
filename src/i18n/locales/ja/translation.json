@@ -781,7 +781,8 @@
     "transcribed": "文字起こし済み",
     "cleanupFailed": "クリーンアップ失敗",
     "mode": {
-      "activeHint": "モード：{{name}}"
+      "activeHint": "モード：{{name}}",
+      "auto": "自動"
     }
   },
   "whatsNew": {

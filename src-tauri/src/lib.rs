@@ -1,4 +1,6 @@
 mod actions;
+#[cfg(target_os = "macos")]
+mod app_activation;
 mod audio_feedback;
 pub mod audio_toolkit;
 mod catalog;
@@ -341,6 +343,11 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // (overlay::overlay_ready) — a fixed delay here would race the webview
     // load and drop the show-overlay event.
     utils::create_recording_overlay(app_handle);
+
+    // Track the frontmost app so per-app auto mode follows focus, not just the
+    // dictation-start moment. macOS only; other platforms resolve at start.
+    #[cfg(target_os = "macos")]
+    app_activation::register(app_handle);
 }
 
 #[tauri::command]

@@ -1031,25 +1031,32 @@ pub async fn fetch_post_process_models(
 
 /// The single manual mode-switch path — shared by the Settings dropdown, the
 /// tray menu, and the overlay Modes popover (all three call this same
-/// command). Writes both the durable `default_mode_id` and the runtime
-/// `post_process_selected_prompt_id` to the same value, and marks the manual
-/// override so a per-app rule can't move it again for the rest of this run.
-/// The hotkey cycle-mode action (`CycleModeAction` in actions.rs) also routes
-/// through here for the same reason.
+/// The single manual mode-switch path — shared by the tray menu, the overlay
+/// Modes popover, and the cycle-mode hotkey. While per-app auto mode is on the
+/// pick is **transient**: it applies to the current app only and is cleared on
+/// the next app switch, so the rule resumes control (see `per_app_mode`). With
+/// auto mode off there is no rule to defer to, so the pick persists as the
+/// selected mode. The Settings dropdown no longer calls this — it edits modes,
+/// not the active selection.
 #[tauri::command]
 #[specta::specta]
 pub fn set_post_process_selected_prompt(app: AppHandle, id: String) -> Result<(), String> {
-    let mut settings = settings::get_settings(&app);
+    let settings = settings::get_settings(&app);
 
     // Verify the prompt exists
     if !settings.post_process_prompts.iter().any(|p| p.id == id) {
         return Err(format!("Prompt with id '{}' not found", id));
     }
 
-    settings.default_mode_id = Some(id.clone());
+    if settings.per_app_auto_mode_enabled {
+        // Transient: sticks for the current app, cleared on the next switch.
+        crate::per_app_mode::set_transient_override(&app, &id);
+        return Ok(());
+    }
+
+    let mut settings = settings;
     settings.post_process_selected_prompt_id = Some(id);
     settings::write_settings(&app, settings);
-    crate::per_app_mode::mark_manual_mode_override();
 
     // Keep the other surfaces (main window, overlay, tray) in sync
     let _ = app.emit(

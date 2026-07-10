@@ -781,7 +781,8 @@
     "transcribed": "已转写",
     "cleanupFailed": "清理失败",
     "mode": {
-      "activeHint": "模式：{{name}}"
+      "activeHint": "模式：{{name}}",
+      "auto": "自动"
     }
   },
   "whatsNew": {

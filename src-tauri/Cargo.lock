@@ -2427,6 +2427,7 @@ name = "handy"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "block2",
  "chrono",
  "clap",
  "cpal",
@@ -2442,6 +2443,8 @@ dependencies = [
  "hound",
  "log",
  "natural",
+ "objc2",
+ "objc2-foundation",
  "once_cell",
  "rdev 0.5.0-2",
  "regex",

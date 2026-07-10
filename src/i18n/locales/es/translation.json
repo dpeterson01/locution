@@ -781,7 +781,8 @@
     "transcribed": "Transcrito",
     "cleanupFailed": "Error de limpieza",
     "mode": {
-      "activeHint": "Modo: {{name}}"
+      "activeHint": "Modo: {{name}}",
+      "auto": "Auto"
     }
   },
   "whatsNew": {
