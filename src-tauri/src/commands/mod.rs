@@ -127,8 +127,10 @@ pub async fn probe_ollama_setup() -> crate::ollama_setup::OllamaProbeResult {
 /// always offers "skip for now" regardless of the outcome.
 #[specta::specta]
 #[tauri::command]
-pub async fn install_and_start_ollama() -> Result<(), crate::ollama_setup::OllamaSetupError> {
-    crate::ollama_setup::install_ollama().await?;
+pub async fn install_and_start_ollama(
+    app: AppHandle,
+) -> Result<(), crate::ollama_setup::OllamaSetupError> {
+    crate::ollama_setup::install_ollama(&app).await?;
     crate::ollama_setup::ensure_ollama_running().await
 }
 

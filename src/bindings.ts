@@ -362,11 +362,13 @@ async deletePostProcessPrompt(id: string) : Promise<Result<null, string>> {
 /**
  * The single manual mode-switch path — shared by the Settings dropdown, the
  * tray menu, and the overlay Modes popover (all three call this same
- * command). Writes both the durable `default_mode_id` and the runtime
- * `post_process_selected_prompt_id` to the same value, and marks the manual
- * override so a per-app rule can't move it again for the rest of this run.
- * The hotkey cycle-mode action (`CycleModeAction` in actions.rs) also routes
- * through here for the same reason.
+ * The single manual mode-switch path — shared by the tray menu, the overlay
+ * Modes popover, and the cycle-mode hotkey. While per-app auto mode is on the
+ * pick is **transient**: it applies to the current app only and is cleared on
+ * the next app switch, so the rule resumes control (see `per_app_mode`). With
+ * auto mode off there is no rule to defer to, so the pick persists as the
+ * selected mode. The Settings dropdown no longer calls this — it edits modes,
+ * not the active selection.
  */
 async setPostProcessSelectedPrompt(id: string) : Promise<Result<null, string>> {
     try {
@@ -1233,7 +1235,7 @@ export type OllamaProbeResult = { availability: OllamaAvailability; brew_availab
  * e.g. "is this mode's typed-in model already present").
  */
 models_present: string[] }
-export type OllamaSetupError = { kind: "no_network" } | { kind: "brew_absent" } | { kind: "disk_full"; detail: string } | { kind: "interrupted"; detail: string } | { kind: "other"; detail: string }
+export type OllamaSetupError = { kind: "no_network" } | { kind: "disk_full"; detail: string } | { kind: "interrupted"; detail: string } | { kind: "other"; detail: string }
 export type OllamaSetupStatus = "not_attempted" | "skipped" | "completed"
 export type OrtAcceleratorSetting = "auto" | "cpu" | "cuda" | "directml" | "rocm"
 export type OverlayPosition = "top" | "bottom"

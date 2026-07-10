@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { useSettings } from "../../hooks/useSettings";
+import { UsageGuideModal } from "../onboarding";
 import { findReleaseNoteToShow } from "./releaseNotes";
 import type { ReleaseNote } from "./releaseNotes";
 import { WhatsNewModal } from "./WhatsNewModal";
@@ -9,6 +10,7 @@ export const WhatsNewGate: React.FC = () => {
   const { settings, isLoading, updateSetting } = useSettings();
   const [note, setNote] = useState<ReleaseNote | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
   const dismissedVersionRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -66,7 +68,26 @@ export const WhatsNewGate: React.FC = () => {
     void updateSetting("whats_new_last_seen_version", note.version);
   };
 
-  if (!note) return null;
-
-  return <WhatsNewModal note={note} open={isOpen} onDismiss={dismiss} />;
+  return (
+    <>
+      {note && (
+        <WhatsNewModal
+          note={note}
+          open={isOpen}
+          onDismiss={dismiss}
+          onShowWalkthrough={() => {
+            // Treat opening the walkthrough as engaging with the update: record
+            // the version as seen, close the notes, and show the walkthrough on
+            // its own so only one modal is ever open at a time.
+            dismiss();
+            setShowWalkthrough(true);
+          }}
+        />
+      )}
+      <UsageGuideModal
+        open={showWalkthrough}
+        onClose={() => setShowWalkthrough(false)}
+      />
+    </>
+  );
 };

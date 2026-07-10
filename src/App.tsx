@@ -20,6 +20,7 @@ import Onboarding, {
   AccessibilityOnboarding,
   OllamaOnboarding,
   DictionaryOnboarding,
+  UsageOnboarding,
 } from "./components/onboarding";
 import { Sidebar, SidebarSection, SECTIONS_CONFIG } from "./components/Sidebar";
 import { WhatsNewGate } from "./components/whats-new";
@@ -33,6 +34,7 @@ type OnboardingStep =
   | "model"
   | "ollama"
   | "dictionary"
+  | "usage"
   | "done";
 
 const renderSettingsContent = (section: SidebarSection) => {
@@ -336,6 +338,12 @@ function App() {
   };
 
   const handleDictionaryComplete = () => {
+    // Personal dictionary is the last setup step; end on the usage walkthrough
+    // so new users learn (and try) the core loop before landing in the app.
+    setOnboardingStep("usage");
+  };
+
+  const handleUsageComplete = () => {
     setOnboardingStep("done");
   };
 
@@ -358,6 +366,10 @@ function App() {
 
   if (onboardingStep === "dictionary") {
     return <DictionaryOnboarding onComplete={handleDictionaryComplete} />;
+  }
+
+  if (onboardingStep === "usage") {
+    return <UsageOnboarding onComplete={handleUsageComplete} />;
   }
 
   return (

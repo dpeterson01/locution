@@ -125,11 +125,41 @@
       "description": "Add names, jargon, and unusual words so they're transcribed correctly. You can edit this list later in Settings.",
       "continue": "Continue"
     },
+    "usage": {
+      "title": "Try your first dictation",
+      "description": "Here's the whole app in three moves. Give it a try below — it works the same way in any app.",
+      "steps": {
+        "hold": {
+          "title": "Hold the key",
+          "body": "Press and hold your shortcut. A small overlay shows Locution is listening."
+        },
+        "speak": {
+          "title": "Speak",
+          "body": "Say what you want to type. Everything is transcribed on your device."
+        },
+        "release": {
+          "title": "Release",
+          "body": "Let go. Your words are cleaned up and pasted into whatever app you're in."
+        }
+      },
+      "practice": {
+        "title": "Your turn",
+        "promptPrefix": "Click the box, then hold",
+        "promptSuffix": "and say a sentence.",
+        "placeholder": "Your dictation will appear here…",
+        "success": "That's dictation working."
+      },
+      "footerNote": "Nothing you say leaves your machine.",
+      "finish": "Get started",
+      "finishSuccess": "Finish",
+      "skip": "Skip for now"
+    },
     "ollama": {
       "title": "Set up local cleanup",
       "description": "Locution can clean up your dictation using a local AI model via Ollama — nothing leaves your machine. This step is optional and can be finished later from Settings.",
       "checking": "Checking for Ollama…",
       "installing": "Installing Ollama…",
+      "downloading": "Downloading Ollama… {{percentage}}%",
       "starting": "Starting Ollama…",
       "configuring": "Setting up cleanup…",
       "ready": "Local cleanup is ready.",
@@ -137,7 +167,6 @@
       "skip": "Skip for now",
       "errors": {
         "no_network": "Couldn't reach the network to set this up.",
-        "brew_absent": "Homebrew isn't installed, so Locution can't install Ollama automatically. Install it manually from ollama.com, then click Retry.",
         "disk_full": "Not enough disk space to finish this step.",
         "other": "Something went wrong setting up Ollama."
       },
@@ -235,6 +264,11 @@
       "pushToTalk": {
         "label": "녹음 중 단축키 홀딩",
         "description": "누르고 있으면 녹음, 놓으면 정지"
+      },
+      "walkthrough": {
+        "title": "How to use Locution",
+        "description": "Replay the quick walkthrough of the hold, speak, release loop.",
+        "button": "Show walkthrough"
       }
     },
     "sound": {

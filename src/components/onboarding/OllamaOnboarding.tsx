@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listen } from "@tauri-apps/api/event";
 import { Check, Loader2, RotateCcw } from "lucide-react";
 import { arch, platform } from "@tauri-apps/plugin-os";
 import { commands, OllamaSetupError } from "@/bindings";
@@ -34,7 +35,7 @@ type OverallPhase =
   | "configuring"
   | "ready";
 
-type OverallErrorKind = "no_network" | "brew_absent" | "disk_full" | "other";
+type OverallErrorKind = "no_network" | "disk_full" | "other";
 
 type ModelState =
   | "pending"
@@ -86,6 +87,9 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
   const [overallError, setOverallError] = useState<OverallErrorKind | null>(
     null,
   );
+  const [installProgress, setInstallProgress] = useState<number | undefined>(
+    undefined,
+  );
   const [modelRows, setModelRows] =
     useState<Record<string, ModelRowState>>(initialModelRows);
   const runIdRef = useRef(0);
@@ -113,7 +117,6 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
 
   const errorKindFor = (error: OllamaSetupError): OverallErrorKind => {
     if (error.kind === "no_network") return "no_network";
-    if (error.kind === "brew_absent") return "brew_absent";
     if (error.kind === "disk_full") return "disk_full";
     return "other";
   };
@@ -228,6 +231,7 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
     const runId = ++runIdRef.current;
     setOverallError(null);
     setModelRows(initialModelRows());
+    setInstallProgress(undefined);
     setPhase("checking");
 
     const probe = await commands.probeOllamaSetup();
@@ -235,11 +239,6 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
 
     if (probe.availability === "running") {
       await pullMissingModels(probe.models_present, runId);
-      return;
-    }
-
-    if (probe.availability === "not_installed" && !probe.brew_available) {
-      setOverallError("brew_absent");
       return;
     }
 
@@ -263,6 +262,27 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
   // change would restart the wizard mid-flow.
   useEffect(() => {
     runSetup();
+  }, []);
+
+  // Reflect installer download progress (macOS zip / Windows exe) into the
+  // "installing" status line. The event only fires while a download is in
+  // flight, so a persistent listener is fine.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen<{ downloaded: number; total: number | null }>(
+      "ollama-install-progress",
+      (event) => {
+        const { downloaded, total } = event.payload;
+        setInstallProgress(
+          total && total > 0
+            ? Math.min(100, Math.round((downloaded / total) * 100))
+            : undefined,
+        );
+      },
+    ).then((fn) => {
+      unlisten = fn;
+    });
+    return () => unlisten?.();
   }, []);
 
   const handleSkip = async () => {
@@ -310,7 +330,9 @@ const OllamaOnboarding: React.FC<OllamaOnboardingProps> = ({
       case "checking":
         return t("onboarding.ollama.checking");
       case "installing":
-        return t("onboarding.ollama.installing");
+        return installProgress !== undefined
+          ? t("onboarding.ollama.downloading", { percentage: installProgress })
+          : t("onboarding.ollama.installing");
       case "starting":
         return t("onboarding.ollama.starting");
       case "configuring":
