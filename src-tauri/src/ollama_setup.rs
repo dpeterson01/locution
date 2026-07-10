@@ -5,6 +5,17 @@
 //! Every function here is designed to fail soft: callers report status back
 //! to the onboarding wizard, which always offers "skip" — nothing here ever
 //! blocks first run.
+//!
+//! DECISION: Ollama is a runtime download, not bundled in the app. `install_ollama`
+//! fetches the official signed/notarized installer per OS on demand (macOS
+//! `Ollama-darwin.zip`, Windows `OllamaSetup.exe`, Linux `install.sh`) rather than
+//! shipping it inside the `.dmg`/`.app`. Reasons: the bundle stays small (cleanup is
+//! opt-in, so users on raw Whisper never pay for it), every install gets the current
+//! Ollama build instead of a pinned stale copy, and Ollama's binaries stay outside our
+//! unsigned bundle's distribution boundary. First-run cleanup already needs the network
+//! to pull the LLM models (much larger than Ollama itself), so this adds no new offline
+//! limitation. Bundling would only pay off for a separate offline-first build that also
+//! ships the models (1 GB+), which is not the default app.
 
 use futures_util::StreamExt;
 use log::debug;
