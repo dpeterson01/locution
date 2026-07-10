@@ -126,33 +126,33 @@
       "continue": "Continue"
     },
     "usage": {
-      "title": "Try your first dictation",
-      "description": "Here's the whole app in three moves. Give it a try below — it works the same way in any app.",
+      "title": "첫 받아쓰기를 해보세요",
+      "description": "앱 사용법은 세 단계가 전부입니다. 아래에서 바로 해보세요. 어떤 앱에서도 똑같이 작동합니다.",
       "steps": {
         "hold": {
-          "title": "Hold the key",
-          "body": "Press and hold your shortcut. A small overlay shows Locution is listening."
+          "title": "키 누르고 있기",
+          "body": "단축키를 누르고 있으세요. 작은 오버레이가 나타나 Locution이 듣고 있음을 알려줍니다."
         },
         "speak": {
-          "title": "Speak",
-          "body": "Say what you want to type. Everything is transcribed on your device."
+          "title": "말하기",
+          "body": "입력하고 싶은 내용을 말하세요. 모든 처리는 사용자의 기기에서 이루어집니다."
         },
         "release": {
-          "title": "Release",
-          "body": "Let go. Your words are cleaned up and pasted into whatever app you're in."
+          "title": "놓기",
+          "body": "키를 놓으세요. 말한 내용이 정리되어 지금 사용 중인 앱에 붙여넣어집니다."
         }
       },
       "practice": {
-        "title": "Your turn",
-        "promptPrefix": "Click the box, then hold",
-        "promptSuffix": "and say a sentence.",
-        "placeholder": "Your dictation will appear here…",
-        "success": "That's dictation working."
+        "title": "이제 해보세요",
+        "promptPrefix": "상자를 클릭한 다음 ",
+        "promptSuffix": " 키를 누른 채 문장을 말해보세요.",
+        "placeholder": "받아쓰기 결과가 여기에 표시됩니다…",
+        "success": "받아쓰기가 작동합니다."
       },
-      "footerNote": "Nothing you say leaves your machine.",
-      "finish": "Get started",
-      "finishSuccess": "Finish",
-      "skip": "Skip for now"
+      "footerNote": "말한 내용은 기기 밖으로 나가지 않습니다.",
+      "finish": "시작하기",
+      "finishSuccess": "완료",
+      "skip": "나중에 하기"
     },
     "ollama": {
       "title": "Set up local cleanup",
@@ -266,9 +266,9 @@
         "description": "누르고 있으면 녹음, 놓으면 정지"
       },
       "walkthrough": {
-        "title": "How to use Locution",
-        "description": "Replay the quick walkthrough of the hold, speak, release loop.",
-        "button": "Show walkthrough"
+        "title": "Locution 사용법",
+        "description": "누르고, 말하고, 놓는 과정을 보여주는 짧은 안내를 다시 볼 수 있습니다.",
+        "button": "안내 보기"
       }
     },
     "sound": {
@@ -820,6 +820,7 @@
     }
   },
   "whatsNew": {
-    "title": "Locution v{{version}}의 새 소식"
+    "title": "Locution v{{version}}의 새 소식",
+    "showWalkthrough": "사용법 보기"
   }
 }

@@ -126,33 +126,33 @@
       "continue": "Continue"
     },
     "usage": {
-      "title": "Try your first dictation",
-      "description": "Here's the whole app in three moves. Give it a try below — it works the same way in any app.",
+      "title": "最初の音声入力を試してみましょう",
+      "description": "アプリの使い方は3ステップだけです。下で試してみてください。どのアプリでも同じように使えます。",
       "steps": {
         "hold": {
-          "title": "Hold the key",
-          "body": "Press and hold your shortcut. A small overlay shows Locution is listening."
+          "title": "キーを長押し",
+          "body": "ショートカットを押し続けます。小さなオーバーレイが表示され、Locution が聞き取り中であることを示します。"
         },
         "speak": {
-          "title": "Speak",
-          "body": "Say what you want to type. Everything is transcribed on your device."
+          "title": "話す",
+          "body": "入力したい内容を話します。すべてお使いのデバイス上で文字起こしされます。"
         },
         "release": {
-          "title": "Release",
-          "body": "Let go. Your words are cleaned up and pasted into whatever app you're in."
+          "title": "離す",
+          "body": "キーを離します。話した内容が整えられ、そのとき使っているアプリに貼り付けられます。"
         }
       },
       "practice": {
-        "title": "Your turn",
-        "promptPrefix": "Click the box, then hold",
-        "promptSuffix": "and say a sentence.",
-        "placeholder": "Your dictation will appear here…",
-        "success": "That's dictation working."
+        "title": "やってみましょう",
+        "promptPrefix": "ボックスをクリックし、",
+        "promptSuffix": "を押しながら文を話してみてください。",
+        "placeholder": "ここに音声入力の結果が表示されます…",
+        "success": "音声入力が動作しています。"
       },
-      "footerNote": "Nothing you say leaves your machine.",
-      "finish": "Get started",
-      "finishSuccess": "Finish",
-      "skip": "Skip for now"
+      "footerNote": "話した内容がデバイスの外に出ることはありません。",
+      "finish": "はじめる",
+      "finishSuccess": "完了",
+      "skip": "今はスキップ"
     },
     "ollama": {
       "title": "Set up local cleanup",
@@ -284,9 +284,9 @@
         "description": "押し続けて録音、離して停止"
       },
       "walkthrough": {
-        "title": "How to use Locution",
-        "description": "Replay the quick walkthrough of the hold, speak, release loop.",
-        "button": "Show walkthrough"
+        "title": "Locution の使い方",
+        "description": "長押し・話す・離すの流れを紹介する短いガイドをもう一度見られます。",
+        "button": "ガイドを表示"
       }
     },
     "sound": {
@@ -820,6 +820,7 @@
     }
   },
   "whatsNew": {
-    "title": "Locution v{{version}} の新機能"
+    "title": "Locution v{{version}} の新機能",
+    "showWalkthrough": "使い方を見る"
   }
 }

@@ -126,33 +126,33 @@
       "continue": "Continue"
     },
     "usage": {
-      "title": "Try your first dictation",
-      "description": "Here's the whole app in three moves. Give it a try below — it works the same way in any app.",
+      "title": "Probiere dein erstes Diktat aus",
+      "description": "Die ganze App in drei Schritten. Probiere es unten gleich aus. Es funktioniert in jeder App gleich.",
       "steps": {
         "hold": {
-          "title": "Hold the key",
-          "body": "Press and hold your shortcut. A small overlay shows Locution is listening."
+          "title": "Taste halten",
+          "body": "Halte deinen Shortcut gedrückt. Ein kleines Overlay zeigt, dass Locution zuhört."
         },
         "speak": {
-          "title": "Speak",
-          "body": "Say what you want to type. Everything is transcribed on your device."
+          "title": "Sprechen",
+          "body": "Sag, was du schreiben möchtest. Alles wird auf deinem Gerät transkribiert."
         },
         "release": {
-          "title": "Release",
-          "body": "Let go. Your words are cleaned up and pasted into whatever app you're in."
+          "title": "Loslassen",
+          "body": "Lass los. Deine Worte werden bereinigt und in die App eingefügt, in der du gerade bist."
         }
       },
       "practice": {
-        "title": "Your turn",
-        "promptPrefix": "Click the box, then hold",
-        "promptSuffix": "and say a sentence.",
-        "placeholder": "Your dictation will appear here…",
-        "success": "That's dictation working."
+        "title": "Du bist dran",
+        "promptPrefix": "Klicke in das Feld, halte dann",
+        "promptSuffix": "gedrückt und sprich einen Satz.",
+        "placeholder": "Dein Diktat erscheint hier …",
+        "success": "So funktioniert das Diktieren."
       },
-      "footerNote": "Nothing you say leaves your machine.",
-      "finish": "Get started",
-      "finishSuccess": "Finish",
-      "skip": "Skip for now"
+      "footerNote": "Nichts, was du sagst, verlässt dein Gerät.",
+      "finish": "Los geht's",
+      "finishSuccess": "Fertig",
+      "skip": "Vorerst überspringen"
     },
     "ollama": {
       "title": "Set up local cleanup",
@@ -284,9 +284,9 @@
         "description": "Gedrückt halten zum Aufnehmen, loslassen zum Stoppen"
       },
       "walkthrough": {
-        "title": "How to use Locution",
-        "description": "Replay the quick walkthrough of the hold, speak, release loop.",
-        "button": "Show walkthrough"
+        "title": "So verwendest du Locution",
+        "description": "Spiel die kurze Einführung zum Ablauf Halten, Sprechen, Loslassen noch einmal ab.",
+        "button": "Einführung anzeigen"
       }
     },
     "sound": {
@@ -820,6 +820,7 @@
     }
   },
   "whatsNew": {
-    "title": "Neu in Locution v{{version}}"
+    "title": "Neu in Locution v{{version}}",
+    "showWalkthrough": "So funktioniert's"
   }
 }

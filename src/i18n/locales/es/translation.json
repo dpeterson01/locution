@@ -126,33 +126,33 @@
       "continue": "Continue"
     },
     "usage": {
-      "title": "Try your first dictation",
-      "description": "Here's the whole app in three moves. Give it a try below — it works the same way in any app.",
+      "title": "Prueba tu primer dictado",
+      "description": "Toda la app en tres pasos. Pruébala abajo. Funciona igual en cualquier aplicación.",
       "steps": {
         "hold": {
-          "title": "Hold the key",
-          "body": "Press and hold your shortcut. A small overlay shows Locution is listening."
+          "title": "Mantén la tecla",
+          "body": "Mantén pulsado tu atajo. Una pequeña superposición indica que Locution está escuchando."
         },
         "speak": {
-          "title": "Speak",
-          "body": "Say what you want to type. Everything is transcribed on your device."
+          "title": "Habla",
+          "body": "Di lo que quieras escribir. Todo se transcribe en tu dispositivo."
         },
         "release": {
-          "title": "Release",
-          "body": "Let go. Your words are cleaned up and pasted into whatever app you're in."
+          "title": "Suelta",
+          "body": "Suelta la tecla. Tus palabras se limpian y se pegan en la aplicación en la que estés."
         }
       },
       "practice": {
-        "title": "Your turn",
-        "promptPrefix": "Click the box, then hold",
-        "promptSuffix": "and say a sentence.",
-        "placeholder": "Your dictation will appear here…",
-        "success": "That's dictation working."
+        "title": "Te toca",
+        "promptPrefix": "Haz clic en el cuadro y mantén pulsado",
+        "promptSuffix": "mientras dices una frase.",
+        "placeholder": "Tu dictado aparecerá aquí…",
+        "success": "Así funciona el dictado."
       },
-      "footerNote": "Nothing you say leaves your machine.",
-      "finish": "Get started",
-      "finishSuccess": "Finish",
-      "skip": "Skip for now"
+      "footerNote": "Nada de lo que digas sale de tu dispositivo.",
+      "finish": "Empezar",
+      "finishSuccess": "Finalizar",
+      "skip": "Omitir por ahora"
     },
     "ollama": {
       "title": "Set up local cleanup",
@@ -284,9 +284,9 @@
         "description": "Mantén presionado para grabar, suelta para detener"
       },
       "walkthrough": {
-        "title": "How to use Locution",
-        "description": "Replay the quick walkthrough of the hold, speak, release loop.",
-        "button": "Show walkthrough"
+        "title": "Cómo usar Locution",
+        "description": "Vuelve a ver la guía rápida del ciclo mantener, hablar y soltar.",
+        "button": "Ver la guía"
       }
     },
     "sound": {
@@ -820,6 +820,7 @@
     }
   },
   "whatsNew": {
-    "title": "Nuevo en Locution v{{version}}"
+    "title": "Nuevo en Locution v{{version}}",
+    "showWalkthrough": "Ver cómo funciona"
   }
 }

@@ -126,33 +126,33 @@
       "continue": "Continue"
     },
     "usage": {
-      "title": "Try your first dictation",
-      "description": "Here's the whole app in three moves. Give it a try below — it works the same way in any app.",
+      "title": "试试你的第一次语音输入",
+      "description": "整个应用只需三步。在下方试一试，在任何应用中用法都一样。",
       "steps": {
         "hold": {
-          "title": "Hold the key",
-          "body": "Press and hold your shortcut. A small overlay shows Locution is listening."
+          "title": "按住按键",
+          "body": "按住你的快捷键。会出现一个小浮层，提示 Locution 正在聆听。"
         },
         "speak": {
-          "title": "Speak",
-          "body": "Say what you want to type. Everything is transcribed on your device."
+          "title": "说话",
+          "body": "说出你想输入的内容。所有转写都在你的设备上完成。"
         },
         "release": {
-          "title": "Release",
-          "body": "Let go. Your words are cleaned up and pasted into whatever app you're in."
+          "title": "松开",
+          "body": "松开按键。你说的话会被整理并粘贴到你当前所在的应用中。"
         }
       },
       "practice": {
-        "title": "Your turn",
-        "promptPrefix": "Click the box, then hold",
-        "promptSuffix": "and say a sentence.",
-        "placeholder": "Your dictation will appear here…",
-        "success": "That's dictation working."
+        "title": "轮到你了",
+        "promptPrefix": "点击文本框，然后按住",
+        "promptSuffix": "并说一句话。",
+        "placeholder": "你的语音输入将显示在这里…",
+        "success": "语音输入已生效。"
       },
-      "footerNote": "Nothing you say leaves your machine.",
-      "finish": "Get started",
-      "finishSuccess": "Finish",
-      "skip": "Skip for now"
+      "footerNote": "你所说的内容不会离开你的设备。",
+      "finish": "开始使用",
+      "finishSuccess": "完成",
+      "skip": "暂时跳过"
     },
     "ollama": {
       "title": "Set up local cleanup",
@@ -284,9 +284,9 @@
         "description": "按住录制，松开停止"
       },
       "walkthrough": {
-        "title": "How to use Locution",
-        "description": "Replay the quick walkthrough of the hold, speak, release loop.",
-        "button": "Show walkthrough"
+        "title": "如何使用 Locution",
+        "description": "重新观看按住、说话、松开流程的快速引导。",
+        "button": "显示引导"
       }
     },
     "sound": {
@@ -820,6 +820,7 @@
     }
   },
   "whatsNew": {
-    "title": "Locution v{{version}} 新功能"
+    "title": "Locution v{{version}} 新功能",
+    "showWalkthrough": "了解用法"
   }
 }

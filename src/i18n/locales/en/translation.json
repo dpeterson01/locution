@@ -127,7 +127,7 @@
     },
     "usage": {
       "title": "Try your first dictation",
-      "description": "Here's the whole app in three moves. Give it a try below — it works the same way in any app.",
+      "description": "Here's the whole app in three moves. Give it a try below. It works the same way in any app.",
       "steps": {
         "hold": {
           "title": "Hold the key",
@@ -753,7 +753,8 @@
     "portableUpdateButton": "Open GitHub Releases"
   },
   "whatsNew": {
-    "title": "New in Locution v{{version}}"
+    "title": "New in Locution v{{version}}",
+    "showWalkthrough": "See how it works"
   },
   "common": {
     "loading": "Loading...",

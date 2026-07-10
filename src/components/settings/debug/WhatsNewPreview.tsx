@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "../../ui/Button";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { WhatsNewModal } from "../../whats-new/WhatsNewModal";
+import { UsageGuideModal } from "../../onboarding";
 import { findLatestReleaseNote } from "../../whats-new/releaseNotes";
 import type { ReleaseNote } from "../../whats-new/releaseNotes";
 
@@ -19,6 +20,7 @@ export const WhatsNewPreview: React.FC<WhatsNewPreviewProps> = ({
   const { t } = useTranslation();
   const [note, setNote] = useState<ReleaseNote | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   const preview = () => {
     setIsLoading(true);
@@ -63,8 +65,16 @@ export const WhatsNewPreview: React.FC<WhatsNewPreviewProps> = ({
           note={note}
           open={true}
           onDismiss={() => setNote(null)}
+          onShowWalkthrough={() => {
+            setNote(null);
+            setShowWalkthrough(true);
+          }}
         />
       )}
+      <UsageGuideModal
+        open={showWalkthrough}
+        onClose={() => setShowWalkthrough(false)}
+      />
     </>
   );
 };

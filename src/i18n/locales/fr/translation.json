@@ -126,33 +126,33 @@
       "continue": "Continue"
     },
     "usage": {
-      "title": "Try your first dictation",
-      "description": "Here's the whole app in three moves. Give it a try below — it works the same way in any app.",
+      "title": "Essayez votre première dictée",
+      "description": "Toute l'application en trois gestes. Essayez ci-dessous. Cela fonctionne de la même façon dans n'importe quelle application.",
       "steps": {
         "hold": {
-          "title": "Hold the key",
-          "body": "Press and hold your shortcut. A small overlay shows Locution is listening."
+          "title": "Maintenez la touche",
+          "body": "Maintenez votre raccourci enfoncé. Une petite surcouche indique que Locution écoute."
         },
         "speak": {
-          "title": "Speak",
-          "body": "Say what you want to type. Everything is transcribed on your device."
+          "title": "Parlez",
+          "body": "Dites ce que vous voulez écrire. Tout est transcrit sur votre appareil."
         },
         "release": {
-          "title": "Release",
-          "body": "Let go. Your words are cleaned up and pasted into whatever app you're in."
+          "title": "Relâchez",
+          "body": "Relâchez. Vos mots sont nettoyés puis collés dans l'application où vous vous trouvez."
         }
       },
       "practice": {
-        "title": "Your turn",
-        "promptPrefix": "Click the box, then hold",
-        "promptSuffix": "and say a sentence.",
-        "placeholder": "Your dictation will appear here…",
-        "success": "That's dictation working."
+        "title": "À vous",
+        "promptPrefix": "Cliquez dans le champ, puis maintenez",
+        "promptSuffix": "et dites une phrase.",
+        "placeholder": "Votre dictée apparaîtra ici…",
+        "success": "Voilà la dictée en action."
       },
-      "footerNote": "Nothing you say leaves your machine.",
-      "finish": "Get started",
-      "finishSuccess": "Finish",
-      "skip": "Skip for now"
+      "footerNote": "Rien de ce que vous dites ne quitte votre appareil.",
+      "finish": "Commencer",
+      "finishSuccess": "Terminer",
+      "skip": "Ignorer pour l'instant"
     },
     "ollama": {
       "title": "Set up local cleanup",
@@ -284,9 +284,9 @@
         "description": "Maintenez pour enregistrer, relâchez pour arrêter"
       },
       "walkthrough": {
-        "title": "How to use Locution",
-        "description": "Replay the quick walkthrough of the hold, speak, release loop.",
-        "button": "Show walkthrough"
+        "title": "Comment utiliser Locution",
+        "description": "Revoyez le petit guide du cycle maintenir, parler, relâcher.",
+        "button": "Afficher le guide"
       }
     },
     "sound": {
@@ -820,6 +820,7 @@
     }
   },
   "whatsNew": {
-    "title": "Nouveautés de Locution v{{version}}"
+    "title": "Nouveautés de Locution v{{version}}",
+    "showWalkthrough": "Voir comment ça marche"
   }
 }

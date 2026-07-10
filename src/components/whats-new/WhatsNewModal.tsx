@@ -30,11 +30,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
       }}
       footer={
         <>
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={onShowWalkthrough}
-          >
+          <Button variant="secondary" size="md" onClick={onShowWalkthrough}>
             {t("whatsNew.showWalkthrough")}
           </Button>
           <Button variant="primary" size="md" onClick={onDismiss}>
