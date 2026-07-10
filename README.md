@@ -55,7 +55,7 @@ The process is entirely local:
 Windows builds (x64 and ARM64) are available on the [releases page](https://github.com/dpeterson01/locution/releases):
 
 1. Download the `.msi` or `.exe` installer from the [releases page](https://github.com/dpeterson01/locution/releases).
-2. The build is unsigned, so Windows SmartScreen warns on first launch. Click **More info**, then **Run anyway**.
+2. The build is unsigned, so Windows SmartScreen warns on first launch. The warning (for example, "Locution … isn't commonly downloaded") is expected — it means Windows can't yet verify the publisher, not that the file is unsafe. If your browser blocks the download, choose **Keep**. Then run the installer, click **More info**, and choose **Run anyway**.
 3. Install [Ollama](https://ollama.com), pull the same two models listed above, and keep it running.
 4. Launch Locution, grant the microphone prompt, and use the default **Ctrl+Space** push-to-talk hotkey (change it in Settings).
 
