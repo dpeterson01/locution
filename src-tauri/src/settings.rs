@@ -655,19 +655,17 @@ fn default_short_threshold_chars() -> u32 {
 }
 
 fn default_short_model() -> String {
-    // Apple Silicon gets the MLX-optimized tag (Metal-accelerated); every other
-    // platform (Windows, Linux, Intel Mac) uses the portable standard tag.
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    return "qwen3.5:2b-mlx".to_string();
-    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-    return "qwen3.5:2b".to_string();
+    // No MLX-tagged variant exists, so every platform uses the same standard
+    // tag. A small non-reasoning instruct model keeps the fast tier quick and
+    // reliable; a reasoning model here is slow and garbles terse cleanup.
+    "qwen2.5:3b".to_string()
 }
 
 pub(crate) fn default_long_model() -> String {
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    return "gemma4:12b-mlx".to_string();
-    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-    return "gemma4:12b".to_string();
+    // No MLX-tagged 8B variant exists, so every platform uses the same standard
+    // tag. An 8B model keeps long-tier cleanup fast on typical hardware while
+    // holding cleanup/context quality (the 12B default was too heavy for most Macs).
+    "llama3.1:8b".to_string()
 }
 
 fn default_app_language() -> String {
@@ -805,7 +803,10 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
         LLMPrompt {
             id: SHORT_DICTATION_MODE_ID.to_string(),
             name: "Short Dictation".to_string(),
-            prompt: "You clean up short spoken dictation. Fix spelling, typos, missing punctuation, and capitalization, and drop filler words like um, uh, like, and you know along with accidental repeated words. Keep the speaker's own wording, slang, and jargon exactly. Never paraphrase, reword, or make it sound more formal. Return the text as one continuous line with no line breaks, lists, or headings. Respond with nothing but the cleaned text: no preamble, no explanation, no quotation marks, no sign-off.\n\nInput text to clean:\n\n${output}".to_string(),
+            // Numbered rules (not prose) on purpose: the small fast-tier model
+            // (qwen2.5:3b) reliably applies capitalization/punctuation when they
+            // are explicit numbered rules, but ignores them when buried in prose.
+            prompt: "You are a precision cleaner for short speech-to-text dictation. Always return the text with correct capitalization and punctuation.\n\nRULES:\n1. Capitalize the first word of every sentence, the pronoun I, and proper nouns.\n2. Add correct terminal punctuation (period, question mark, or exclamation point) and commas where they aid reading.\n3. Fix obvious spelling mistakes and typos.\n4. Delete filler words like um, uh, like, and you know, along with accidental repeated words.\n5. Keep the speaker's own wording, slang, and jargon. Do NOT paraphrase, reword, reformat, or convert numbers.\n6. Respond with nothing but the cleaned text on a single line: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
