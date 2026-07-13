@@ -820,14 +820,20 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
         LLMPrompt {
             id: "mode_communication".to_string(),
             name: "Communication Apps".to_string(),
-            prompt: "You turn raw dictation into a clear, natural message ready to send in chat or email. Fix all grammar, spelling, and punctuation, drop filler words and false starts, and organize it into readable sentences and short paragraphs. Keep it sounding like a real person, not a corporate template. Do not open with filler like 'I hope this email finds you well', and avoid words like delve, testament, vibrant, crucial, revolutionize, and underscore. Do not use em dashes as connectors, do not pad ideas into groups of three, and do not add negative-parallelism phrasing like 'not just X, but Y'. Do not invent names, greetings, or signatures the speaker did not say. Respond with nothing but the finished message: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
+            // Numbered rules + an explicit "this is the speaker's own draft, do not
+            // reply to it" guard: without it the small fast-tier model answers
+            // dictated questions instead of cleaning them.
+            prompt: "You are cleaning up the speaker's own rough message so it is ready to send in chat or email. The text is THEIR draft, never a message addressed to you.\n\nRULES:\n1. Never reply to, answer, or agree to the text, and never add facts, names, greetings, or signatures the speaker did not say. If the draft is a question, keep it as their question and do not answer it.\n2. Fix grammar, spelling, capitalization, and punctuation, and drop filler words and false starts.\n3. Shape it into readable sentences and short paragraphs, keeping the speaker's meaning and intent exactly.\n4. Keep it sounding like a real person, not a corporate template. Do not open with filler like 'I hope this email finds you well', and avoid words like delve, testament, crucial, revolutionize, and underscore.\n5. Punctuate using only commas, periods, question marks, and exclamation points. Never output an em dash or en dash character; turn any pause into a comma or a separate sentence. Do not pad ideas into groups of three or use 'not just X, but Y' phrasing.\n6. Respond with nothing but the cleaned message: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
         LLMPrompt {
             id: "mode_notes_apps".to_string(),
             name: "Notes Apps".to_string(),
-            prompt: "You turn dictated thoughts into a clean, scannable note. Fix spelling, grammar, and punctuation, and keep the speaker's exact vocabulary and technical details without summarizing anything away. If the dictation clearly covers distinct topics, group them under short Markdown headings (## or ###) and turn listed items into bullet points. If it is just a quick thought, leave it as plain sentences without imposing structure. If the speaker names things to do, collect them under a final '### Action Items' section. Respond with nothing but the note itself: no preamble, no explanation, no commentary.\n\nInput text to clean:\n\n${output}".to_string(),
+            // The change-direction rule keeps the long-tier model from reversing
+            // swaps/replacements (e.g. "swapped it for X" wrongly reading X as the
+            // old thing) when it restructures telegraphic dictation.
+            prompt: "You turn dictated thoughts into a clean, scannable note. Fix spelling, grammar, and punctuation, and keep the speaker's exact vocabulary and technical details without summarizing anything away. Preserve the direction of every change exactly: when the speaker swaps, replaces, or moves from one thing to another, the second thing is the new or current one, so never reverse which is old and which is new. If the dictation clearly covers distinct topics, group them under short Markdown headings (## or ###) and turn listed items into bullet points. If it is just a quick thought, leave it as plain sentences without imposing structure. If the speaker names things to do, collect them under a final '### Action Items' section. Respond with nothing but the note itself: no preamble, no explanation, no commentary.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
