@@ -707,7 +707,7 @@ const PostProcessingSettingsAdaptiveComponent: React.FC = () => {
   const state = usePostProcessProviderState();
   const { getSetting, updateSetting, isUpdating } = useSettings();
 
-  const shortThresholdChars = getSetting("short_threshold_chars") ?? 150;
+  const shortThresholdChars = getSetting("short_threshold_chars") ?? 500;
   const shortModel = getSetting("short_model") ?? "";
   const longModel = getSetting("long_model") ?? "";
   const skipLlmUnderChars = getSetting("skip_llm_under_chars") ?? 0;

@@ -651,7 +651,7 @@ fn default_overlay_always_show() -> bool {
 }
 
 fn default_short_threshold_chars() -> u32 {
-    150
+    500
 }
 
 fn default_short_model() -> String {
@@ -662,10 +662,18 @@ fn default_short_model() -> String {
 }
 
 pub(crate) fn default_long_model() -> String {
-    // No MLX-tagged 8B variant exists, so every platform uses the same standard
-    // tag. An 8B model keeps long-tier cleanup fast on typical hardware while
-    // holding cleanup/context quality (the 12B default was too heavy for most Macs).
-    "llama3.1:8b".to_string()
+    // Qwen3.5 9B for heavier long-tier cleanup. It is a reasoning model but runs
+    // non-thinking here: the local "custom" provider sends reasoning_effort="none"
+    // (see actions.rs), so no thinking tokens are generated. macOS uses the
+    // MLX-accelerated build; other platforms use the standard tag.
+    #[cfg(target_os = "macos")]
+    {
+        "qwen3.5:9b-mlx".to_string()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        "qwen3.5:9b".to_string()
+    }
 }
 
 fn default_app_language() -> String {
@@ -806,14 +814,14 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
             // Numbered rules (not prose) on purpose: the small fast-tier model
             // (qwen2.5:3b) reliably applies capitalization/punctuation when they
             // are explicit numbered rules, but ignores them when buried in prose.
-            prompt: "You are a precision cleaner for short speech-to-text dictation. Always return the text with correct capitalization and punctuation.\n\nRULES:\n1. Capitalize the first word of every sentence, the pronoun I, and proper nouns.\n2. Add correct terminal punctuation (period, question mark, or exclamation point) and commas where they aid reading.\n3. Fix obvious spelling mistakes and typos.\n4. Delete filler words like um, uh, like, and you know, along with accidental repeated words.\n5. Keep the speaker's own wording, slang, and jargon. Do NOT paraphrase, reword, reformat, or convert numbers.\n6. Respond with nothing but the cleaned text on a single line: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
+            prompt: "You are a precision cleaner for short speech-to-text dictation. Always return the text with correct capitalization and punctuation.\n\nRULES:\n1. Capitalize the first word of every sentence, the pronoun I, and proper nouns.\n2. Add correct terminal punctuation (period, question mark, or exclamation point) and commas where they aid reading. If the speaker is asking something, keep it worded as a question and end it with a question mark; never turn a question into a statement.\n3. Fix obvious spelling mistakes, typos, and misheard homophones (their/they're/there, your/you're, its/it's, to/too/two) using the sentence's meaning.\n4. Delete filler words like um, uh, like, and you know, along with accidental repeated words.\n5. Keep every word the speaker said, along with their own wording, slang, and jargon. Do NOT drop content, paraphrase, reword, reformat, or convert numbers.\n6. Respond with nothing but the cleaned text on a single line: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
         LLMPrompt {
             id: LONG_DICTATION_MODE_ID.to_string(),
             name: "Long Dictation".to_string(),
-            prompt: "You clean up longer spoken dictation. Fix spelling, typos, punctuation, and capitalization, and drop filler words like um, uh, like, and you know along with accidental repeated words. Keep the speaker's own wording, slang, and jargon. Fix the mechanics; never rewrite sentences to sound like an assistant wrote them. Break the text into clear paragraphs so it reads well, but do not add headings, bullet points, or summaries. Respond with nothing but the cleaned text: no preamble, no explanation, no quotation marks, no sign-off.\n\nInput text to clean:\n\n${output}".to_string(),
+            prompt: "You clean up longer spoken dictation. Fix spelling, typos, misheard homophones (their/they're/there, your/you're, its/it's, to/too/two) using the sentence's meaning, punctuation, and capitalization, and drop filler words like um, uh, like, and you know along with accidental repeated words. Keep the speaker's own wording, slang, and jargon. Fix the mechanics; never rewrite sentences to sound like an assistant wrote them. Break the text into clear paragraphs so it reads well, but do not add headings, bullet points, or summaries. Respond with nothing but the cleaned text: no preamble, no explanation, no quotation marks, no sign-off.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
