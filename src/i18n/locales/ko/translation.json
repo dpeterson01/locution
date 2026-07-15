@@ -280,8 +280,12 @@
         "loading": "로딩 중..."
       },
       "audioFeedback": {
-        "label": "오디오 피드백",
-        "description": "녹음 시작 및 정지 시 소리 재생"
+        "label": "녹음 시작 시 소리 재생",
+        "description": "녹음이 시작될 때 소리를 재생합니다"
+      },
+      "playSoundOnEnd": {
+        "label": "녹음 종료 시 소리 재생",
+        "description": "녹음이 정지될 때 소리를 재생합니다"
       },
       "outputDevice": {
         "title": "출력 장치",

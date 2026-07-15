@@ -298,8 +298,12 @@
         "loading": "加载中..."
       },
       "audioFeedback": {
-        "label": "音频反馈",
-        "description": "录制开始和停止时播放声音"
+        "label": "录制开始时播放声音",
+        "description": "录制开始时播放声音"
+      },
+      "playSoundOnEnd": {
+        "label": "录制结束时播放声音",
+        "description": "录制停止时播放声音"
       },
       "outputDevice": {
         "title": "输出设备",

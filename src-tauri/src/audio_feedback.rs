@@ -9,9 +9,20 @@ use std::path::{Path, PathBuf};
 use std::thread;
 use tauri::{AppHandle, Manager};
 
+#[derive(Clone, Copy)]
 pub enum SoundType {
     Start,
     Stop,
+}
+
+/// Whether the sound for this event is enabled. Start is gated by
+/// `audio_feedback` (the "play sound when recording starts" toggle); Stop is
+/// gated by the separate `play_sound_on_end` toggle.
+fn sound_enabled(settings: &AppSettings, sound_type: SoundType) -> bool {
+    match sound_type {
+        SoundType::Start => settings.audio_feedback,
+        SoundType::Stop => settings.play_sound_on_end,
+    }
 }
 
 fn resolve_sound_path(
@@ -47,7 +58,7 @@ fn get_sound_base_dir(settings: &AppSettings) -> tauri::path::BaseDirectory {
 
 pub fn play_feedback_sound(app: &AppHandle, sound_type: SoundType) {
     let settings = settings::get_settings(app);
-    if !settings.audio_feedback {
+    if !sound_enabled(&settings, sound_type) {
         return;
     }
     if let Some(path) = resolve_sound_path(app, &settings, sound_type) {
@@ -57,7 +68,7 @@ pub fn play_feedback_sound(app: &AppHandle, sound_type: SoundType) {
 
 pub fn play_feedback_sound_blocking(app: &AppHandle, sound_type: SoundType) {
     let settings = settings::get_settings(app);
-    if !settings.audio_feedback {
+    if !sound_enabled(&settings, sound_type) {
         return;
     }
     if let Some(path) = resolve_sound_path(app, &settings, sound_type) {

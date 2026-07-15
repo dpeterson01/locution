@@ -298,8 +298,12 @@
         "loading": "Wird geladen..."
       },
       "audioFeedback": {
-        "label": "Audio-Feedback",
-        "description": "Ton bei Start und Ende der Aufnahme abspielen"
+        "label": "Ton bei Aufnahmestart abspielen",
+        "description": "Einen Ton abspielen, wenn die Aufnahme beginnt"
+      },
+      "playSoundOnEnd": {
+        "label": "Ton bei Aufnahmeende abspielen",
+        "description": "Einen Ton abspielen, wenn die Aufnahme endet"
       },
       "outputDevice": {
         "title": "Ausgabegerät",

@@ -355,6 +355,8 @@ pub struct AppSettings {
     pub bindings: HashMap<String, ShortcutBinding>,
     pub push_to_talk: bool,
     pub audio_feedback: bool,
+    #[serde(default)]
+    pub play_sound_on_end: bool,
     #[serde(default = "default_audio_feedback_volume")]
     pub audio_feedback_volume: f32,
     #[serde(default = "default_sound_theme")]
@@ -662,18 +664,12 @@ fn default_short_model() -> String {
 }
 
 pub(crate) fn default_long_model() -> String {
-    // Qwen3.5 9B for heavier long-tier cleanup. It is a reasoning model but runs
-    // non-thinking here: the local "custom" provider sends reasoning_effort="none"
-    // (see actions.rs), so no thinking tokens are generated. macOS uses the
-    // MLX-accelerated build; other platforms use the standard tag.
-    #[cfg(target_os = "macos")]
-    {
-        "qwen3.5:9b-mlx".to_string()
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        "qwen3.5:9b".to_string()
-    }
+    // Qwen2.5 14B for heavier long-tier cleanup: a strong, non-thinking
+    // instruction-following model (IFEval ~81), so it cleans and returns without
+    // a reasoning phase. Qwen3.5 was rejected here because it thinks and cannot be
+    // reliably silenced through the OpenAI-compatible endpoint the app uses. No
+    // MLX-tagged variant exists, so every platform uses the same standard tag.
+    "qwen2.5:14b".to_string()
 }
 
 fn default_app_language() -> String {
@@ -1147,7 +1143,8 @@ pub fn get_default_settings() -> AppSettings {
         settings_schema_version: default_settings_schema_version(),
         bindings,
         push_to_talk: true,
-        audio_feedback: false,
+        audio_feedback: true,
+        play_sound_on_end: false,
         audio_feedback_volume: default_audio_feedback_volume(),
         sound_theme: default_sound_theme(),
         start_hidden: default_start_hidden(),

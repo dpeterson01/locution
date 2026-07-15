@@ -298,8 +298,12 @@
         "loading": "Loading..."
       },
       "audioFeedback": {
-        "label": "Audio Feedback",
-        "description": "Play sound when recording starts and stops"
+        "label": "Play sound when recording starts",
+        "description": "Play a sound when recording begins"
+      },
+      "playSoundOnEnd": {
+        "label": "Play sound when recording ends",
+        "description": "Play a sound when recording stops"
       },
       "outputDevice": {
         "title": "Output Device",

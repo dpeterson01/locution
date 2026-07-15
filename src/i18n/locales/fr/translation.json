@@ -298,8 +298,12 @@
         "loading": "Chargement..."
       },
       "audioFeedback": {
-        "label": "Signal sonore",
-        "description": "Jouer un son au début et à la fin de l'enregistrement"
+        "label": "Jouer un son au début de l'enregistrement",
+        "description": "Jouer un son lorsque l'enregistrement commence"
+      },
+      "playSoundOnEnd": {
+        "label": "Jouer un son à la fin de l'enregistrement",
+        "description": "Jouer un son lorsque l'enregistrement s'arrête"
       },
       "outputDevice": {
         "title": "Périphérique de sortie",

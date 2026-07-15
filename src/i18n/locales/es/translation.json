@@ -298,8 +298,12 @@
         "loading": "Cargando..."
       },
       "audioFeedback": {
-        "label": "Retroalimentación de Audio",
-        "description": "Reproducir sonido cuando la grabación inicia y se detiene"
+        "label": "Reproducir sonido al iniciar la grabación",
+        "description": "Reproducir un sonido cuando comienza la grabación"
+      },
+      "playSoundOnEnd": {
+        "label": "Reproducir sonido al finalizar la grabación",
+        "description": "Reproducir un sonido cuando se detiene la grabación"
       },
       "outputDevice": {
         "title": "Dispositivo de Salida",

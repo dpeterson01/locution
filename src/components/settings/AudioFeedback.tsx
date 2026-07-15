@@ -15,6 +15,7 @@ export const AudioFeedback: React.FC<AudioFeedbackProps> = React.memo(
     const { t } = useTranslation();
     const { getSetting, updateSetting, isUpdating } = useSettings();
     const audioFeedbackEnabled = getSetting("audio_feedback") || false;
+    const playSoundOnEnd = getSetting("play_sound_on_end") || false;
 
     return (
       <div className="flex flex-col">
@@ -24,6 +25,15 @@ export const AudioFeedback: React.FC<AudioFeedbackProps> = React.memo(
           isUpdating={isUpdating("audio_feedback")}
           label={t("settings.sound.audioFeedback.label")}
           description={t("settings.sound.audioFeedback.description")}
+          descriptionMode={descriptionMode}
+          grouped={grouped}
+        />
+        <ToggleSwitch
+          checked={playSoundOnEnd}
+          onChange={(enabled) => updateSetting("play_sound_on_end", enabled)}
+          isUpdating={isUpdating("play_sound_on_end")}
+          label={t("settings.sound.playSoundOnEnd.label")}
+          description={t("settings.sound.playSoundOnEnd.description")}
           descriptionMode={descriptionMode}
           grouped={grouped}
         />
