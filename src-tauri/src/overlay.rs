@@ -412,6 +412,19 @@ fn show_overlay_state(app_handle: &AppHandle, state: &str) {
         force_overlay_topmost(&overlay_window);
 
         let _ = overlay_window.emit("show-overlay", state);
+
+        // Self-heal placement. At cold start (and after display or wake
+        // changes) the monitor work-area metrics can still be unsettled when
+        // the overlay first shows, leaving it mispositioned — and nothing
+        // re-checks until the user toggles the position setting. Re-apply the
+        // position shortly after showing so a bad initial placement corrects
+        // itself. When the placement was already correct this is a no-op
+        // (set_position to the same coordinates).
+        let app_clone = app_handle.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            update_overlay_position(&app_clone);
+        });
     }
 }
 
