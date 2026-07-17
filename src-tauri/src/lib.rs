@@ -344,6 +344,12 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // load and drop the show-overlay event.
     utils::create_recording_overlay(app_handle);
 
+    // Keep the overlay correctly placed across display-configuration changes
+    // and wake-from-sleep (macOS only), so a stale position self-heals instead
+    // of stranding the always-show pill until a manual position toggle.
+    #[cfg(target_os = "macos")]
+    utils::register_reposition_observers(app_handle);
+
     // Track the frontmost app so per-app auto mode follows focus, not just the
     // dictation-start moment. macOS only; other platforms resolve at start.
     #[cfg(target_os = "macos")]

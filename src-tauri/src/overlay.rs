@@ -413,19 +413,101 @@ fn show_overlay_state(app_handle: &AppHandle, state: &str) {
 
         let _ = overlay_window.emit("show-overlay", state);
 
-        // Self-heal placement. At cold start (and after display or wake
-        // changes) the monitor work-area metrics can still be unsettled when
-        // the overlay first shows, leaving it mispositioned — and nothing
-        // re-checks until the user toggles the position setting. Re-apply the
-        // position shortly after showing so a bad initial placement corrects
-        // itself. When the placement was already correct this is a no-op
-        // (set_position to the same coordinates).
-        let app_clone = app_handle.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(300));
-            update_overlay_position(&app_clone);
-        });
+        // Self-heal placement: re-apply the position shortly after showing so a
+        // bad initial placement (unsettled work-area metrics at cold start)
+        // corrects itself instead of waiting for a manual position toggle.
+        reposition_overlay_deferred(app_handle);
     }
+}
+
+/// Re-apply the overlay position after a short delay. Used after showing the
+/// overlay and after display/wake changes: at those moments the monitor
+/// work-area metrics can still be unsettled, so a brief delay lets them settle
+/// before repositioning. A no-op when the placement was already correct
+/// (set_position to the same coordinates).
+fn reposition_overlay_deferred(app_handle: &AppHandle) {
+    let app_clone = app_handle.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        update_overlay_position(&app_clone);
+    });
+}
+
+/// Registers macOS observers that re-apply the overlay placement when the
+/// display configuration changes (resolution, arrangement, monitor
+/// plug/unplug) or the machine wakes from sleep. Without this, a mispositioned
+/// overlay on the always-show idle pill has nothing to re-check it (the pill is
+/// not re-shown), so it would stay stranded until a manual position toggle.
+///
+/// Follows the same observer pattern as `app_activation::register`: the blocks
+/// and their captured `AppHandle`s are copied by the notification centers, and
+/// the returned tokens are leaked so the observers live for the process
+/// lifetime (`Retained` is neither `Send` nor `Sync`, so it cannot be stored in
+/// Tauri state or a global).
+#[cfg(target_os = "macos")]
+pub fn register_reposition_observers(app: &AppHandle) {
+    use block2::RcBlock;
+    use objc2::rc::Retained;
+    use objc2::runtime::AnyObject;
+    use objc2::{class, msg_send};
+    use objc2_foundation::NSString;
+
+    // Display configuration changed. Posted by NSApplication to the default
+    // notification center, delivered on the main thread.
+    {
+        let app_handle = app.clone();
+        let block = RcBlock::new(move |_notification: *mut AnyObject| {
+            reposition_overlay_deferred(&app_handle);
+        });
+        unsafe {
+            let center: *mut AnyObject = msg_send![class!(NSNotificationCenter), defaultCenter];
+            if center.is_null() {
+                log::warn!("overlay reposition observer: NSNotificationCenter unavailable");
+            } else {
+                let name =
+                    NSString::from_str("NSApplicationDidChangeScreenParametersNotification");
+                let token: Retained<AnyObject> = msg_send![
+                    center,
+                    addObserverForName: &*name,
+                    object: std::ptr::null::<AnyObject>(),
+                    queue: std::ptr::null::<AnyObject>(),
+                    usingBlock: &*block,
+                ];
+                std::mem::forget(token);
+            }
+        }
+    }
+
+    // Machine woke from sleep. Posted by NSWorkspace's own notification center.
+    {
+        let app_handle = app.clone();
+        let block = RcBlock::new(move |_notification: *mut AnyObject| {
+            reposition_overlay_deferred(&app_handle);
+        });
+        unsafe {
+            let workspace: *mut AnyObject = msg_send![class!(NSWorkspace), sharedWorkspace];
+            if workspace.is_null() {
+                log::warn!("overlay reposition observer: NSWorkspace unavailable");
+            } else {
+                let center: *mut AnyObject = msg_send![workspace, notificationCenter];
+                if center.is_null() {
+                    log::warn!("overlay reposition observer: workspace center unavailable");
+                } else {
+                    let name = NSString::from_str("NSWorkspaceDidWakeNotification");
+                    let token: Retained<AnyObject> = msg_send![
+                        center,
+                        addObserverForName: &*name,
+                        object: std::ptr::null::<AnyObject>(),
+                        queue: std::ptr::null::<AnyObject>(),
+                        usingBlock: &*block,
+                    ];
+                    std::mem::forget(token);
+                }
+            }
+        }
+    }
+
+    log::debug!("overlay reposition observers registered");
 }
 
 /// Shows the recording overlay window with fade-in animation
