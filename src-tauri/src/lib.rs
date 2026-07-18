@@ -354,6 +354,39 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // dictation-start moment. macOS only; other platforms resolve at start.
     #[cfg(target_os = "macos")]
     app_activation::register(app_handle);
+
+    // Best-effort: if AI cleanup is enabled with the local Ollama ("custom")
+    // provider, make sure the Ollama service is up. On a boot-time autostart the
+    // user never opened the app by hand, so nothing else would have started
+    // Ollama — without this the first dictation's cleanup silently falls back to
+    // raw text until the service is running. Fully gated (hosted providers and
+    // the raw-transcript path never touch Ollama) and fire-and-forget: a failure
+    // just leaves cleanup on its existing fall-back, same as before.
+    let cleanup_settings = settings::get_settings(app_handle);
+    let cleanup_uses_ollama = cleanup_settings.post_process_enabled
+        && cleanup_settings
+            .active_post_process_provider()
+            .map(|p| p.id.as_str())
+            == Some("custom")
+        && !cleanup_settings.short_model.trim().is_empty();
+    if cleanup_uses_ollama {
+        tauri::async_runtime::spawn(async {
+            // Skip the start-and-poll loop entirely when Ollama isn't installed —
+            // ensure_ollama_running would otherwise spin its full 20s timeout
+            // waiting for a service that can never come up.
+            if !ollama_setup::ollama_installed().await {
+                log::debug!(
+                    "Boot-time Ollama ensure skipped: Ollama not installed (cleanup falls back to raw text)"
+                );
+                return;
+            }
+            if let Err(e) = ollama_setup::ensure_ollama_running().await {
+                log::debug!(
+                    "Boot-time Ollama ensure failed (cleanup falls back to raw text until it's running): {e}"
+                );
+            }
+        });
+    }
 }
 
 #[tauri::command]

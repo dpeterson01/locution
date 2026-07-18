@@ -274,7 +274,7 @@ fn macos_app_paths() -> Vec<PathBuf> {
 /// Broader "is Ollama on this machine at all" check: PATH first, then the
 /// known absolute install locations (and, on macOS, the app bundle). More
 /// reliable than `binary_installed` inside a packaged, Finder-launched app.
-async fn ollama_installed() -> bool {
+pub async fn ollama_installed() -> bool {
     if binary_installed().await {
         return true;
     }
