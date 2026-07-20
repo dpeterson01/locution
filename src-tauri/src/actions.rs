@@ -1097,6 +1097,31 @@ impl ShortcutAction for TranscribeAction {
             }
         };
 
+        // Recipient bias words for transcription (Phase 3). Gated only on the
+        // accessibility-read privacy switch — independent of provider/mode/tier
+        // — so recipient spellings are fixed even on the fast/short cleanup
+        // path, which never captures the full context. Reuse the already-read
+        // recipients when the full context was captured (8B path); otherwise do
+        // the lighter recipient-only read.
+        let recipient_words: Vec<String> = {
+            let settings = get_settings(app);
+            if !settings.context_capture_enabled {
+                Vec::new()
+            } else {
+                context
+                    .as_ref()
+                    .and_then(|c| c.recipients.clone())
+                    .or_else(|| crate::context_capture::capture_recipients(app))
+                    .map(|s| {
+                        s.split(',')
+                            .map(|name| name.trim().to_string())
+                            .filter(|name| !name.is_empty())
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default()
+            }
+        };
+
         let binding_id = binding_id.to_string(); // Clone binding_id for the async task
         let cancel_generation = rm.cancel_generation();
 
@@ -1153,7 +1178,7 @@ impl ShortcutAction for TranscribeAction {
                         // surfaced instead — the worker may still hold the engine,
                         // so a batch fallback would contend with it.
                         Ok(Some(text)) if !text.trim().is_empty() => Ok(text),
-                        Ok(_) => tm.transcribe(samples),
+                        Ok(_) => tm.transcribe(samples, &recipient_words),
                         Err(err) => Err(err),
                     };
 

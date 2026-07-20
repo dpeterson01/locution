@@ -1094,7 +1094,7 @@ impl TranscriptionManager {
         .emit(&self.app_handle);
     }
 
-    pub fn transcribe(&self, audio: Vec<f32>) -> Result<String> {
+    pub fn transcribe(&self, audio: Vec<f32>, extra_words: &[String]) -> Result<String> {
         #[cfg(debug_assertions)]
         if std::env::var("HANDY_FORCE_TRANSCRIPTION_FAILURE").is_ok() {
             return Err(anyhow::anyhow!(
@@ -1132,6 +1132,31 @@ impl TranscriptionManager {
 
         // Get current settings for configuration
         let settings = get_settings(&self.app_handle);
+
+        // Ephemeral Whisper-prompt bias words (e.g. the message recipients read
+        // from the focused app) merged onto the user's saved custom words, for
+        // this one run only. They bias speech-to-text toward correct spellings
+        // without touching the persisted list. Used solely for the initial
+        // prompt below — NOT the fuzzy post-correction, which would hard-replace
+        // and could mangle short name/word collisions.
+        let initial_prompt_words: Vec<String> = if extra_words.is_empty() {
+            settings.custom_words.clone()
+        } else {
+            let mut merged = settings.custom_words.clone();
+            for word in extra_words {
+                let word = word.trim();
+                if !word.is_empty()
+                    && !merged.iter().any(|existing| existing.eq_ignore_ascii_case(word))
+                {
+                    merged.push(word.to_string());
+                }
+            }
+            debug!(
+                "Transcription: merged {} ephemeral bias word(s) into the initial prompt",
+                merged.len().saturating_sub(settings.custom_words.len())
+            );
+            merged
+        };
 
         // Validate selected language against the model's supported languages.
         // If the language isn't supported, fall back to "auto" to prevent errors.
@@ -1211,13 +1236,15 @@ impl TranscriptionManager {
                         // that accept one (whisper family). Attaching the
                         // whisper run extension to a non-whisper arch is rejected
                         // with INVALID_ARG, so skip it there and let the fuzzy
-                        // post-correction handle custom words instead.
+                        // post-correction handle custom words instead. The word
+                        // list here includes any ephemeral bias words (recipients)
+                        // merged above; the persisted list is untouched.
                         let family =
-                            if settings.custom_words.is_empty() || !model_takes_initial_prompt {
+                            if initial_prompt_words.is_empty() || !model_takes_initial_prompt {
                                 None
                             } else {
                                 Some(RunExtension::Whisper(WhisperRunOptions {
-                                    initial_prompt: Some(settings.custom_words.join(", ")),
+                                    initial_prompt: Some(initial_prompt_words.join(", ")),
                                     ..Default::default()
                                 }))
                             };

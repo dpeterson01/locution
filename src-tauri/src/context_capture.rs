@@ -261,7 +261,7 @@ mod macos {
     /// the window title (web content isn't exposed via AX); Outlook — DFS the
     /// compose header for To/Cc pills (the title is the subject, not the
     /// recipients). Scoped to these bundle ids only; nothing read elsewhere.
-    fn recipients_for_app(bundle_id: Option<&str>) -> Option<String> {
+    pub(super) fn recipients_for_app(bundle_id: Option<&str>) -> Option<String> {
         let bundle = bundle_id?;
         if !matches!(
             bundle,
@@ -471,6 +471,38 @@ pub fn capture(app: &AppHandle) -> Option<ContextSnapshot> {
 
 #[cfg(not(target_os = "macos"))]
 pub fn capture(_app: &AppHandle) -> Option<ContextSnapshot> {
+    None
+}
+
+/// Recipient-only capture for the transcription bias path (Phase 3). Reads
+/// ONLY the per-app recipients (Teams / Outlook / Messages) and skips the
+/// clipboard/selection/field work [`capture`] does. The caller gates this on
+/// `context_capture_enabled` (the accessibility-read privacy switch) so it can
+/// fix recipient spellings even on the fast/short cleanup tier, where the full
+/// context path is never captured. Must be called OFF the main thread.
+#[cfg(target_os = "macos")]
+pub fn capture_recipients(app: &AppHandle) -> Option<String> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    let (tx, rx) = mpsc::channel();
+    let dispatched = app
+        .run_on_main_thread(move || {
+            let bundle = macos::frontmost_app().1;
+            let _ = tx.send(macos::recipients_for_app(bundle.as_deref()));
+        })
+        .is_ok();
+    if !dispatched {
+        return None;
+    }
+    rx.recv_timeout(Duration::from_millis(300))
+        .ok()
+        .flatten()
+        .and_then(|s| sanitize(s, MAX_RECIPIENTS_CHARS))
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn capture_recipients(_app: &AppHandle) -> Option<String> {
     None
 }
 
