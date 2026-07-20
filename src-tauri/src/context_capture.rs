@@ -102,6 +102,8 @@ mod macos {
     #[link(name = "CoreFoundation", kind = "framework")]
     extern "C" {
         fn CFRelease(cf: CFTypeRef);
+        fn CFArrayGetCount(array: CFTypeRef) -> isize;
+        fn CFArrayGetValueAtIndex(array: CFTypeRef, index: isize) -> CFTypeRef;
     }
 
     /// Password fields report role `AXTextField` with SUBROLE
@@ -176,13 +178,89 @@ mod macos {
             .map(|app| app.processIdentifier())
     }
 
-    /// Best-effort "who is this addressed to" for the three supported
-    /// messaging apps. Reads the app's focused-window title, which is the
-    /// conversation/recipient name in Messages and the chat title in Teams;
-    /// for Outlook it is the compose subject, a weaker signal. A precise
-    /// To/participants field read needs per-app AX-tree paths validated with
-    /// Accessibility Inspector — this window-title read is the reliable floor.
-    /// Scoped to these bundle ids only; no recipient capture in any other app.
+    /// Parse Teams' focused-window title down to just the recipient names.
+    /// Title format: `Chat | <names> | Microsoft | <account-email> | Microsoft
+    /// Teams` (an unread-count prefix like `(3) ` may lead). Teams' web content
+    /// isn't exposed via AX, so the title is the only source. Only "Chat"
+    /// titles carry recipients; channels/meetings/other views return None so
+    /// we never feed the org name, the account email, or a view name to cleanup.
+    pub(super) fn parse_teams_recipients(title: &str) -> Option<String> {
+        let mut t = title.trim();
+        // Drop a leading unread-count prefix like "(3) ".
+        if let Some(rest) = t.strip_prefix('(') {
+            if let Some((_, after)) = rest.split_once(") ") {
+                t = after.trim();
+            }
+        }
+        let mut parts = t.split(" | ");
+        if parts.next()?.trim() != "Chat" {
+            return None;
+        }
+        let names = parts.next()?.trim();
+        (!names.is_empty()).then(|| names.to_string())
+    }
+
+    /// DFS the Outlook compose header for recipient pills. Each To/Cc field
+    /// (`AXIdentifier` `toTextField`/`ccTextField`, or `AXDescription`
+    /// "To Recipients"/"Cc Recipients") holds one `AXStaticText` child per
+    /// recipient, valued "<Name>, <email>, <presence>"; the field's own value
+    /// is only U+FFFC object-replacement placeholders. Bounded by a node budget
+    /// AND a wall-clock deadline so a large inline compose (the whole Inbox
+    /// window tree) can't stall the main thread.
+    unsafe fn collect_outlook_recipients(
+        el: AXUIElementRef,
+        depth: u32,
+        budget: &mut i32,
+        deadline: std::time::Instant,
+        out: &mut Vec<String>,
+    ) {
+        if depth > 24 || *budget <= 0 || std::time::Instant::now() >= deadline {
+            return;
+        }
+        *budget -= 1;
+
+        let is_recipient_field = matches!(
+            copy_string_attribute(el, "AXIdentifier").as_deref(),
+            Some("toTextField") | Some("ccTextField")
+        ) || matches!(
+            copy_string_attribute(el, "AXDescription").as_deref(),
+            Some("To Recipients") | Some("Cc Recipients")
+        );
+
+        let Some(children) = copy_raw(el, "AXChildren") else {
+            return;
+        };
+        let count = CFArrayGetCount(children);
+        for i in 0..count {
+            // Borrowed (Get rule) — valid while `children` is alive; never released.
+            let child = CFArrayGetValueAtIndex(children, i);
+            if child.is_null() {
+                continue;
+            }
+            if is_recipient_field {
+                // Pills are AXStaticText children; the inline typing field and
+                // other children are excluded by the role check.
+                if copy_string_attribute(child, "AXRole").as_deref() == Some("AXStaticText") {
+                    if let Some(v) = copy_string_attribute(child, "AXValue") {
+                        let name = v.split(',').next().unwrap_or("").trim();
+                        if !name.is_empty() && !name.contains('\u{fffc}') {
+                            out.push(name.to_string());
+                        }
+                    }
+                }
+            } else {
+                collect_outlook_recipients(child, depth + 1, budget, deadline, out);
+            }
+        }
+        CFRelease(children);
+    }
+
+    /// "Who is this addressed to" for the three supported apps, read from the
+    /// app's focused window (contract validated against live apps 2026-07-20):
+    /// Messages — window title is the conversation/contact name; Teams — parse
+    /// the window title (web content isn't exposed via AX); Outlook — DFS the
+    /// compose header for To/Cc pills (the title is the subject, not the
+    /// recipients). Scoped to these bundle ids only; nothing read elsewhere.
     fn recipients_for_app(bundle_id: Option<&str>) -> Option<String> {
         let bundle = bundle_id?;
         if !matches!(
@@ -193,21 +271,43 @@ mod macos {
         }
         let pid = frontmost_pid()?;
         unsafe {
+            // Bound per-message AX IPC process-wide (system-wide element sets
+            // the default for child element messages the Outlook DFS makes).
+            let system = AXUIElementCreateSystemWide();
+            if !system.is_null() {
+                let _ = AXUIElementSetMessagingTimeout(system, 0.05);
+                CFRelease(system);
+            }
             let app = AXUIElementCreateApplication(pid);
             if app.is_null() {
                 return None;
             }
             let _ = AXUIElementSetMessagingTimeout(app, 0.05);
-            let title = match copy_raw(app, "AXFocusedWindow") {
-                Some(window) => {
-                    let t = copy_string_attribute(window, "AXTitle");
-                    CFRelease(window);
-                    t
-                }
-                None => None,
+            let result = if let Some(window) = copy_raw(app, "AXFocusedWindow") {
+                let r = match bundle {
+                    "com.apple.MobileSMS" => copy_string_attribute(window, "AXTitle")
+                        .filter(|s| !s.is_empty() && s != "Messages"),
+                    "com.microsoft.teams2" => copy_string_attribute(window, "AXTitle")
+                        .as_deref()
+                        .and_then(parse_teams_recipients),
+                    "com.microsoft.Outlook" => {
+                        let mut names: Vec<String> = Vec::new();
+                        let mut budget: i32 = 2500;
+                        let deadline = std::time::Instant::now()
+                            + std::time::Duration::from_millis(120);
+                        collect_outlook_recipients(window, 0, &mut budget, deadline, &mut names);
+                        names.dedup();
+                        (!names.is_empty()).then(|| names.join(", "))
+                    }
+                    _ => None,
+                };
+                CFRelease(window);
+                r
+            } else {
+                None
             };
             CFRelease(app);
-            title
+            result
         }
     }
 
@@ -215,8 +315,9 @@ mod macos {
     /// fields), plus per-app recipients — one main-thread pass. Bounded by the
     /// AX messaging timeout. AX reads are synchronous IPC into the target app;
     /// the per-message 50ms timeout keeps a hung target from blocking the main
-    /// thread past capture()'s budget across the ~6 messages this can send
-    /// (focused element, subrole, selected text, value, focused window, title).
+    /// thread. The focused-element reads send four messages (focused element,
+    /// subrole, selected text, value); the recipient read (recipients_for_app)
+    /// is separately bounded by its own node budget and wall-clock deadline.
     pub(super) fn focused_reads(bundle_id: Option<&str>) -> FocusedReads {
         let recipients = recipients_for_app(bundle_id);
         unsafe {
@@ -537,5 +638,28 @@ mod tests {
             super::sanitize("héllo".to_string(), 2),
             Some("hé".to_string())
         );
+    }
+
+    #[test]
+    fn teams_title_parses_to_recipient_names_only() {
+        use super::macos::parse_teams_recipients as p;
+        // Group chat: names segment only, org/email/app dropped.
+        assert_eq!(
+            p("Chat | Daniel Stafford, Nikki Moseley | Microsoft | me@x.com | Microsoft Teams"),
+            Some("Daniel Stafford, Nikki Moseley".to_string())
+        );
+        // 1:1 chat.
+        assert_eq!(
+            p("Chat | Jane Roe | Microsoft | me@x.com | Microsoft Teams"),
+            Some("Jane Roe".to_string())
+        );
+        // Leading unread-count prefix is stripped.
+        assert_eq!(
+            p("(3) Chat | Jane Roe | Microsoft | me@x.com | Microsoft Teams"),
+            Some("Jane Roe".to_string())
+        );
+        // Non-chat views carry no recipients.
+        assert_eq!(p("Activity | Microsoft Teams"), None);
+        assert_eq!(p("Microsoft Teams"), None);
     }
 }
