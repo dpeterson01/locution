@@ -200,6 +200,19 @@ fn build_context_block(ctx: &crate::context_capture::ContextSnapshot) -> String 
             None => block.push_str(&format!("\nActive app: {}", name)),
         }
     }
+    if let Some(recipients) = &ctx.recipients {
+        block.push_str(&format!(
+            "\nMessage recipients (spell any of these names exactly as written): {}",
+            recipients
+        ));
+    }
+    if let Some(field) = &ctx.field_text {
+        block.push_str(&format!(
+            "\nText already in the field (keep its spelling of names and terms; \
+             do not repeat this text in your reply):\n{}",
+            field
+        ));
+    }
     if let Some(sel) = &ctx.selected_text {
         block.push_str(&format!("\nSelected text:\n{}", sel));
     }
@@ -435,9 +448,11 @@ async fn post_process_transcription(
         if let Some(ctx) = context.filter(|c| !c.is_empty()) {
             prelude_blocks.push(build_context_block(ctx));
             debug!(
-                "Context injected: mode={} app={} selection_chars={} clipboard_chars={}",
+                "Context injected: mode={} app={} recipients={} field_chars={} selection_chars={} clipboard_chars={}",
                 selected_prompt_id,
                 ctx.app_name.is_some(),
+                ctx.recipients.is_some(),
+                ctx.field_text.as_deref().map_or(0, |s| s.chars().count()),
                 ctx.selected_text
                     .as_deref()
                     .map_or(0, |s| s.chars().count()),

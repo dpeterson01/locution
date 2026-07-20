@@ -15,6 +15,14 @@ pub struct ContextSnapshot {
     pub app_name: Option<String>,
     pub bundle_id: Option<String>,
     pub selected_text: Option<String>,
+    /// Full text already in the focused input box (AXValue), captured only
+    /// when it is small enough to be a compose field rather than a document
+    /// (see `sanitize_field_text`). Lets cleanup match spellings the user
+    /// already typed instead of overwriting them.
+    pub field_text: Option<String>,
+    /// Best-effort "who is this addressed to" for the supported messaging
+    /// apps (Teams, Outlook, Messages). See `macos::recipients_for_app`.
+    pub recipients: Option<String>,
     pub clipboard: Option<String>,
 }
 
@@ -23,6 +31,8 @@ impl ContextSnapshot {
         self.app_name.is_none()
             && self.bundle_id.is_none()
             && self.selected_text.is_none()
+            && self.field_text.is_none()
+            && self.recipients.is_none()
             && self.clipboard.is_none()
     }
 }
@@ -32,6 +42,12 @@ impl ContextSnapshot {
 const MAX_SELECTION_CHARS: usize = 2000;
 const MAX_CLIPBOARD_CHARS: usize = 1000;
 const MAX_APP_META_CHARS: usize = 200;
+/// Field text above this length is treated as a document, not a compose box,
+/// and dropped entirely (see `sanitize_field_text`).
+const MAX_FIELD_CHARS: usize = 2000;
+/// Recipient strings are short (a name or a few names); cap well below the
+/// content channels.
+const MAX_RECIPIENTS_CHARS: usize = 300;
 
 /// Trim, drop empties, neutralize a literal `${output}` (the legacy prompt
 /// path replaces every occurrence, so captured content must never smuggle the
@@ -43,6 +59,18 @@ fn sanitize(raw: String, max_chars: usize) -> Option<String> {
     }
     let cleaned = trimmed.replace("${output}", "[output]");
     Some(cleaned.chars().take(max_chars).collect())
+}
+
+/// Field text is a spelling reference for a compose box, not a document. If
+/// the focused field holds more than `MAX_FIELD_CHARS`, it is an editor or a
+/// long document, so DROP it rather than inject a truncated slab that would
+/// mislead cleanup. Otherwise trim and neutralize `${output}` like `sanitize`.
+fn sanitize_field_text(raw: String) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.chars().count() > MAX_FIELD_CHARS {
+        return None;
+    }
+    Some(trimmed.replace("${output}", "[output]"))
 }
 
 #[cfg(target_os = "macos")]
@@ -68,6 +96,7 @@ mod macos {
         ) -> AXError;
         fn AXUIElementSetMessagingTimeout(element: AXUIElementRef, timeout_seconds: f32)
             -> AXError;
+        fn AXUIElementCreateApplication(pid: i32) -> AXUIElementRef;
     }
 
     #[link(name = "CoreFoundation", kind = "framework")]
@@ -129,48 +158,116 @@ mod macos {
         Some(value)
     }
 
-    /// Selected text of the focused UI element, skipping secure fields.
-    /// Main thread only; bounded by the AX messaging timeout below.
-    pub(super) fn selected_text_via_ax() -> Option<String> {
+    /// Reads from the focused element (selected text + full field value) plus
+    /// per-app recipients, gathered in one main-thread pass.
+    #[derive(Default)]
+    pub(super) struct FocusedReads {
+        pub(super) selected_text: Option<String>,
+        pub(super) field_text: Option<String>,
+        pub(super) recipients: Option<String>,
+    }
+
+    /// Frontmost app pid via NSWorkspace, needed to build a per-app
+    /// AXUIElement for the recipient read. Main thread only.
+    fn frontmost_pid() -> Option<i32> {
+        let workspace = NSWorkspace::sharedWorkspace();
+        workspace
+            .frontmostApplication()
+            .map(|app| app.processIdentifier())
+    }
+
+    /// Best-effort "who is this addressed to" for the three supported
+    /// messaging apps. Reads the app's focused-window title, which is the
+    /// conversation/recipient name in Messages and the chat title in Teams;
+    /// for Outlook it is the compose subject, a weaker signal. A precise
+    /// To/participants field read needs per-app AX-tree paths validated with
+    /// Accessibility Inspector — this window-title read is the reliable floor.
+    /// Scoped to these bundle ids only; no recipient capture in any other app.
+    fn recipients_for_app(bundle_id: Option<&str>) -> Option<String> {
+        let bundle = bundle_id?;
+        if !matches!(
+            bundle,
+            "com.microsoft.teams2" | "com.microsoft.Outlook" | "com.apple.MobileSMS"
+        ) {
+            return None;
+        }
+        let pid = frontmost_pid()?;
+        unsafe {
+            let app = AXUIElementCreateApplication(pid);
+            if app.is_null() {
+                return None;
+            }
+            let _ = AXUIElementSetMessagingTimeout(app, 0.05);
+            let title = match copy_raw(app, "AXFocusedWindow") {
+                Some(window) => {
+                    let t = copy_string_attribute(window, "AXTitle");
+                    CFRelease(window);
+                    t
+                }
+                None => None,
+            };
+            CFRelease(app);
+            title
+        }
+    }
+
+    /// Selected text AND full value of the focused UI element (skipping secure
+    /// fields), plus per-app recipients — one main-thread pass. Bounded by the
+    /// AX messaging timeout. AX reads are synchronous IPC into the target app;
+    /// the per-message 50ms timeout keeps a hung target from blocking the main
+    /// thread past capture()'s budget across the ~6 messages this can send
+    /// (focused element, subrole, selected text, value, focused window, title).
+    pub(super) fn focused_reads(bundle_id: Option<&str>) -> FocusedReads {
+        let recipients = recipients_for_app(bundle_id);
         unsafe {
             let system = AXUIElementCreateSystemWide();
             if system.is_null() {
-                return None;
+                return FocusedReads {
+                    recipients,
+                    ..Default::default()
+                };
             }
-            // AX attribute reads are synchronous IPC into the target app; a
-            // hung target would otherwise block us for the multi-second
-            // default timeout. The timeout is PER MESSAGE and this function
-            // sends up to three (focused element, subrole, selected text),
-            // so 100ms keeps the worst case ~300ms — capture()'s budget.
-            let _ = AXUIElementSetMessagingTimeout(system, 0.1);
+            let _ = AXUIElementSetMessagingTimeout(system, 0.05);
 
             let focused = match copy_raw(system, "AXFocusedUIElement") {
                 Some(f) => f,
                 None => {
                     CFRelease(system);
-                    return None;
+                    return FocusedReads {
+                        recipients,
+                        ..Default::default()
+                    };
                 }
             };
 
-            // Defense-in-depth: macOS already refuses secure-field content
-            // via AX, but skip explicitly so intent is documented.
+            // Defense-in-depth: macOS already refuses secure-field content via
+            // AX, but skip explicitly so intent is documented. The same guard
+            // covers both the selection and the full field value.
             let is_secure =
                 is_secure_field(copy_string_attribute(focused, SECURE_FIELD_ATTRIBUTE).as_deref());
-            let text = if is_secure {
-                None
+            let (selected_text, field_text) = if is_secure {
+                (None, None)
             } else {
-                copy_string_attribute(focused, "AXSelectedText")
+                (
+                    copy_string_attribute(focused, "AXSelectedText"),
+                    copy_string_attribute(focused, "AXValue"),
+                )
             };
 
             CFRelease(focused);
             CFRelease(system);
-            text
+
+            FocusedReads {
+                selected_text,
+                field_text,
+                recipients,
+            }
         }
     }
 
     /// Whether the currently-focused UI element is a secure (password) field.
-    /// Standalone version of the check inlined in `selected_text_via_ax` —
-    /// usable right before a paste, without the rest of `capture()`'s
+    /// Standalone version of the check inlined in `focused_reads` — usable
+    /// right before a paste, without the rest of `capture()`'s
     /// clipboard/app-metadata work. Main-thread only, like the other AX
     /// reads in this module.
     pub(super) fn is_focused_element_secure() -> bool {
@@ -219,15 +316,17 @@ pub fn capture(app: &AppHandle) -> Option<ContextSnapshot> {
     let dispatched = app
         .run_on_main_thread(move || {
             // A late send after recv_timeout fails silently — fine.
-            let _ = tx.send((macos::frontmost_app(), macos::selected_text_via_ax()));
+            let app = macos::frontmost_app();
+            let reads = macos::focused_reads(app.1.as_deref());
+            let _ = tx.send((app, reads));
         })
         .is_ok();
 
-    let ((app_name, bundle_id), selected_raw) = if dispatched {
-        rx.recv_timeout(Duration::from_millis(300))
-            .unwrap_or(((None, None), None))
+    let ((app_name, bundle_id), reads) = if dispatched {
+        rx.recv_timeout(Duration::from_millis(400))
+            .unwrap_or(((None, None), macos::FocusedReads::default()))
     } else {
-        ((None, None), None)
+        ((None, None), macos::FocusedReads::default())
     };
 
     // App metadata is sanitized like the content channels: a localized app
@@ -235,18 +334,27 @@ pub fn capture(app: &AppHandle) -> Option<ContextSnapshot> {
     let snapshot = ContextSnapshot {
         app_name: app_name.and_then(|s| sanitize(s, MAX_APP_META_CHARS)),
         bundle_id: bundle_id.and_then(|s| sanitize(s, MAX_APP_META_CHARS)),
-        selected_text: selected_raw.and_then(|s| sanitize(s, MAX_SELECTION_CHARS)),
+        selected_text: reads.selected_text.and_then(|s| sanitize(s, MAX_SELECTION_CHARS)),
+        field_text: reads.field_text.and_then(sanitize_field_text),
+        recipients: reads
+            .recipients
+            .and_then(|s| sanitize(s, MAX_RECIPIENTS_CHARS)),
         clipboard,
     };
 
     // Shape only — never content.
     log::debug!(
-        "Context capture: app={} selection_chars={} clipboard_chars={}",
+        "Context capture: app={} selection_chars={} field_chars={} recipients={} clipboard_chars={}",
         snapshot.app_name.is_some(),
         snapshot
             .selected_text
             .as_deref()
             .map_or(0, |s| s.chars().count()),
+        snapshot
+            .field_text
+            .as_deref()
+            .map_or(0, |s| s.chars().count()),
+        snapshot.recipients.is_some(),
         snapshot
             .clipboard
             .as_deref()
