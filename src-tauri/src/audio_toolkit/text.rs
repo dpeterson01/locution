@@ -18,6 +18,40 @@ fn build_ngram(words: &[&str]) -> String {
         .concat()
 }
 
+/// Folds sibilant onsets/graphemes (`sh`, `zh`, `x`, `z`) to a single `s` and
+/// collapses runs, so tokens that sound alike but start with different letters
+/// compare equal. Soundex anchors on the literal first letter, so it wrongly
+/// rejects e.g. "shinxin" vs "xinxin" (S vs X) even though they're homophones;
+/// this key bridges exactly that class of speech-to-text name error.
+fn sibilant_key(s: &str) -> String {
+    let lower = s.to_lowercase();
+    let chars: Vec<char> = lower.chars().collect();
+    let mut folded = String::with_capacity(chars.len());
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        // Digraphs sh/zh -> s.
+        if (c == 's' || c == 'z') && chars.get(i + 1) == Some(&'h') {
+            folded.push('s');
+            i += 2;
+            continue;
+        }
+        folded.push(match c {
+            'x' | 'z' => 's',
+            other => other,
+        });
+        i += 1;
+    }
+    // Collapse consecutive duplicates (e.g. the double s from "xs").
+    let mut out = String::with_capacity(folded.len());
+    for ch in folded.chars() {
+        if !out.ends_with(ch) {
+            out.push(ch);
+        }
+    }
+    out
+}
+
 /// Finds the best matching custom word for a candidate string
 ///
 /// Uses Levenshtein distance and Soundex phonetic matching to find
@@ -64,8 +98,15 @@ fn find_best_match<'a>(
             1.0
         };
 
-        // Calculate phonetic similarity using Soundex
-        let phonetic_match = soundex(candidate, custom_word_nospace);
+        // Phonetic similarity: Soundex, plus a sibilant fold. Soundex keeps the
+        // literal first letter, so it rejects homophone name errors that differ
+        // only in a sibilant onset ("shinxin" vs "xinxin"); the fold catches
+        // them. Restrict the fold to tokens >= 5 chars so collapsing sibilants
+        // can't equate short unrelated words (e.g. "max" vs "mass").
+        let phonetic_match = soundex(candidate, custom_word_nospace)
+            || (candidate.len() >= 5
+                && custom_word_nospace.len() >= 5
+                && sibilant_key(candidate) == sibilant_key(custom_word_nospace));
 
         // Combine scores: favor phonetic matches, but also consider string similarity
         let combined_score = if phonetic_match {
@@ -371,6 +412,38 @@ mod tests {
         let custom_words = vec!["hello".to_string(), "world".to_string()];
         let result = apply_custom_words(text, &custom_words, 0.5);
         assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn sibilant_fold_bridges_homophone_name_at_default_threshold() {
+        // The real failure: Parakeet heard "Shinxin" for the recipient
+        // "Xinxin". Soundex rejects it (S vs X); the sibilant fold catches it.
+        // Uses the app's default word_correction_threshold (0.18).
+        let text = "Hey Shinxin, I'm going to take a closer look at that";
+        let custom_words = vec!["Xinxin".to_string()];
+        let result = apply_custom_words(text, &custom_words, 0.18);
+        assert_eq!(
+            result,
+            "Hey Xinxin, I'm going to take a closer look at that"
+        );
+    }
+
+    #[test]
+    fn sibilant_key_folds_sibilants() {
+        assert_eq!(sibilant_key("Xinxin"), sibilant_key("Shinxin"));
+        assert_eq!(sibilant_key("Zhang"), sibilant_key("Shang"));
+        assert_ne!(sibilant_key("Robert"), sibilant_key("Michael"));
+    }
+
+    #[test]
+    fn sibilant_fold_does_not_over_correct_short_words() {
+        // The >=5-char guard keeps the fold from equating short unrelated words.
+        // "zap"/"sap" fold identically but Soundex differs (Z vs S) and
+        // Levenshtein (0.33) is over threshold, so without the fold they don't
+        // match — and the guard blocks the fold, so "zap" must stay "zap".
+        let custom_words = vec!["sap".to_string()];
+        let result = apply_custom_words("pour the zap now", &custom_words, 0.18);
+        assert_eq!(result, "pour the zap now");
     }
 
     #[test]

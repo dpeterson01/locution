@@ -1102,23 +1102,28 @@ impl ShortcutAction for TranscribeAction {
         // — so recipient spellings are fixed even on the fast/short cleanup
         // path, which never captures the full context. Reuse the already-read
         // recipients when the full context was captured (8B path); otherwise do
-        // the lighter recipient-only read.
+        // the lighter recipient-only read. Split into individual name tokens
+        // (first/last) so a first-name greeting matches, and drop tokens under
+        // 3 chars to avoid the fuzzy corrector over-matching short words.
         let recipient_words: Vec<String> = {
             let settings = get_settings(app);
             if !settings.context_capture_enabled {
                 Vec::new()
             } else {
-                context
+                let words = context
                     .as_ref()
                     .and_then(|c| c.recipients.clone())
                     .or_else(|| crate::context_capture::capture_recipients(app))
                     .map(|s| {
-                        s.split(',')
-                            .map(|name| name.trim().to_string())
-                            .filter(|name| !name.is_empty())
+                        s.split([',', ';'])
+                            .flat_map(|part| part.split_whitespace())
+                            .map(|w| w.trim().to_string())
+                            .filter(|w| w.chars().count() >= 3)
                             .collect::<Vec<_>>()
                     })
-                    .unwrap_or_default()
+                    .unwrap_or_default();
+                debug!("Recipient bias words captured: {}", words.len());
+                words
             }
         };
 

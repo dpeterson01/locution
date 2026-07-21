@@ -1062,8 +1062,10 @@ impl TranscriptionManager {
 
         let settings = get_settings(&self.app_handle);
         // Streaming models do not receive a decode prompt, so custom words
-        // always go through the shared fuzzy post-correction path.
-        let filtered = post_process_transcription_text(raw, &settings, false);
+        // always go through the shared fuzzy post-correction path. The live
+        // stream has no recipient snapshot, so it uses the saved list only.
+        let custom_words = settings.custom_words.clone();
+        let filtered = post_process_transcription_text(raw, &settings, &custom_words, false);
 
         self.maybe_unload_immediately("streaming transcription");
         Ok(Some(filtered))
@@ -1422,9 +1424,15 @@ impl TranscriptionManager {
         // Apply fuzzy word correction if custom words are configured — UNLESS the
         // words were already handed to the model as an initial prompt (whisper
         // family). Non-whisper transcribe-cpp models can't take a prompt, so they
-        // still get fuzzy correction here, same as the ONNX engines.
-        let filtered_result =
-            post_process_transcription_text(result, &settings, model_takes_initial_prompt);
+        // still get fuzzy correction here, same as the ONNX engines. The word
+        // list includes any ephemeral recipient bias words merged above, so
+        // recipients also correct names on non-whisper models.
+        let filtered_result = post_process_transcription_text(
+            result,
+            &settings,
+            &initial_prompt_words,
+            model_takes_initial_prompt,
+        );
 
         let et = std::time::Instant::now();
         let translation_note = if settings.translate_to_english {
@@ -1634,14 +1642,11 @@ fn transcribe_cpp_run_plan(
 fn post_process_transcription_text(
     raw: String,
     settings: &AppSettings,
+    custom_words: &[String],
     custom_words_already_prompted: bool,
 ) -> String {
-    let corrected = if !settings.custom_words.is_empty() && !custom_words_already_prompted {
-        apply_custom_words(
-            &raw,
-            &settings.custom_words,
-            settings.word_correction_threshold,
-        )
+    let corrected = if !custom_words.is_empty() && !custom_words_already_prompted {
+        apply_custom_words(&raw, custom_words, settings.word_correction_threshold)
     } else {
         raw
     };
