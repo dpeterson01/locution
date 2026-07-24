@@ -12,7 +12,7 @@ Locution is a fully-local macOS dictation app: global hotkey → mic capture →
 ## Hard rules (enforced unconditionally)
 
 1. **No push, no PR without explicit approval.** Prepare branch, commit, title, description — stop and wait for go-ahead. "Work autonomously" does not authorize pushing.
-2. **v0.1.2 release is HELD.** Do NOT run `gh workflow run release.yml` without Derek's explicit confirmation for that specific release.
+2. **No release without explicit approval.** No version-specific hold is active now — the v0.1.2/v0.1.3 drafts were superseded and never published (v0.1.4 onward shipped). Never dispatch `release.yml` without Derek naming the version (see rule 6).
 3. **Bindings regen contract.** After any Rust `#[tauri::command]` add or remove, run `cd src-tauri && cargo run` to regenerate `src/bindings.ts`. Never hand-edit `bindings.ts`. Verify the diff before claiming done.
 4. **Commit per logical phase.** Gate every commit on `bunx tsc --noEmit` + `cargo check` (or `cargo clippy`). Show the output — don't just assert it passed.
 5. **DB migrations are append-only.** Never edit existing `MIGRATIONS` entries. Add a new entry for each schema change.
