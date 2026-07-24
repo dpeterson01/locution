@@ -1,0 +1,4 @@
+# Staged externalBin sidecars (built by scripts/build-afm-sidecar.sh from
+# ../afm-sidecar/). Build artifacts — never commit.
+*
+!.gitignore

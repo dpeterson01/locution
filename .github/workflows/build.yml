@@ -493,6 +493,15 @@ jobs:
           sudo cp -vL "$LIBDIR"/libtranscribe.so* "$LIBDIR"/libggml*.so* /usr/local/lib/ 2>/dev/null || true
           sudo ldconfig
 
+      - name: Build AFM sidecar (Apple Silicon)
+        # The Apple Foundation Models sidecar is bundled only into the arm64
+        # macOS DMG (macOS 26, Apple Silicon). This stages it at
+        # src-tauri/binaries/afm-sidecar-aarch64-apple-darwin for Tauri's
+        # externalBin, which the arm release args enable via
+        # `--config src-tauri/tauri.afm.conf.json`.
+        if: inputs.target == 'aarch64-apple-darwin'
+        run: ./scripts/build-afm-sidecar.sh
+
       - name: Build with Tauri
         uses: tauri-apps/tauri-action@v0
         env:
