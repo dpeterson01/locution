@@ -447,7 +447,7 @@
         "title": "Raccourci clavier"
       },
       "api": {
-        "title": "API (Compatible OpenAI)",
+        "title": "Cleanup Provider",
         "provider": {
           "title": "Fournisseur",
           "description": "Sélectionnez un fournisseur compatible OpenAI."

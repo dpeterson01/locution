@@ -17,6 +17,7 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = React.memo(
         onSelect={onChange}
         disabled={disabled}
         className="flex-1"
+        menuMaxHeightClass="max-h-96"
       />
     );
   },

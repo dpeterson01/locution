@@ -447,7 +447,7 @@
         "title": "Tastenkürzel"
       },
       "api": {
-        "title": "API (OpenAI-kompatibel)",
+        "title": "Cleanup Provider",
         "provider": {
           "title": "Anbieter",
           "description": "Wähle einen OpenAI-kompatiblen Anbieter."

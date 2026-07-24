@@ -15,6 +15,8 @@ interface DropdownProps {
   placeholder?: string;
   disabled?: boolean;
   onRefresh?: () => void;
+  /** Tailwind max-height class for the open menu. Defaults to `max-h-60`. */
+  menuMaxHeightClass?: string;
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -25,6 +27,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   placeholder = "Select an option...",
   disabled = false,
   onRefresh,
+  menuMaxHeightClass = "max-h-60",
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -86,7 +89,9 @@ export const Dropdown: React.FC<DropdownProps> = ({
         </svg>
       </button>
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-mid-gray/80 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+        <div
+          className={`absolute top-full left-0 right-0 mt-1 bg-background border border-mid-gray/80 rounded-md shadow-lg z-50 ${menuMaxHeightClass} overflow-y-auto`}
+        >
           {options.length === 0 ? (
             <div className="px-2 py-1 text-sm text-mid-gray">
               {t("common.noOptionsFound")}

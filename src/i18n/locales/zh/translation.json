@@ -447,7 +447,7 @@
         "title": "快捷键"
       },
       "api": {
-        "title": "API（兼容 OpenAI）",
+        "title": "Cleanup Provider",
         "provider": {
           "title": "提供商",
           "description": "选择一个兼容 OpenAI 的提供商。"

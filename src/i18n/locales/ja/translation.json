@@ -447,7 +447,7 @@
         "title": "ホットキー"
       },
       "api": {
-        "title": "API（OpenAI互換）",
+        "title": "Cleanup Provider",
         "provider": {
           "title": "プロバイダー",
           "description": "OpenAI互換のプロバイダーを選択。"

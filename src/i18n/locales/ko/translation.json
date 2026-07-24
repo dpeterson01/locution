@@ -447,7 +447,7 @@
         "title": "단축키"
       },
       "api": {
-        "title": "API (OpenAI 호환)",
+        "title": "Cleanup Provider",
         "provider": {
           "title": "제공자",
           "description": "OpenAI 호환 제공자를 선택하세요."

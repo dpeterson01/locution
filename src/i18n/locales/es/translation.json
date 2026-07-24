@@ -447,7 +447,7 @@
         "title": "Tecla de acceso rápido"
       },
       "api": {
-        "title": "API (Compatible con OpenAI)",
+        "title": "Cleanup Provider",
         "provider": {
           "title": "Proveedor",
           "description": "Selecciona un proveedor compatible con OpenAI."

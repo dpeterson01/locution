@@ -703,7 +703,14 @@ fn default_show_tray_icon() -> bool {
 }
 
 fn default_post_process_provider_id() -> String {
-    "openai".to_string()
+    // On Apple Silicon (macOS 26+, where the FoundationModels framework ships),
+    // default to the on-device Apple Foundation Models provider — no key, no
+    // install, nothing leaves the Mac. Everywhere else, default to OpenAI.
+    if afm_supported() {
+        "afm".to_string()
+    } else {
+        "openai".to_string()
+    }
 }
 
 /// Whether Apple Foundation Models can run on this machine: macOS 26+ (the

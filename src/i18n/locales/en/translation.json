@@ -447,7 +447,7 @@
         "title": "Hotkey"
       },
       "api": {
-        "title": "API (OpenAI Compatible)",
+        "title": "Cleanup Provider",
         "provider": {
           "title": "Provider",
           "description": "Select an OpenAI-compatible provider."
