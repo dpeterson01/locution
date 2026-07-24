@@ -796,7 +796,9 @@
       "whisperModelNotLoaded": "Das Sprache-zu-Text-Modell ist noch nicht bereit – versuche es gleich erneut.",
       "accessibilityMissingTitle": "Bedienungshilfen-Zugriff erforderlich",
       "accessibilityMissingHint": "Locution kann erst in andere Apps schreiben, wenn du in den Systemeinstellungen den Zugriff auf die Bedienungshilfen gewährst.",
-      "postProcessFailed": "Bereinigung fehlgeschlagen – dein ursprüngliches Diktat wurde beibehalten."
+      "postProcessFailed": "Bereinigung fehlgeschlagen – dein ursprüngliches Diktat wurde beibehalten.",
+      "afmContextExceededTitle": "Diktat zu lang für die geräteinterne Bereinigung",
+      "afmContextExceededHint": "Dein ursprüngliches Diktat wurde beibehalten. Wechsle für lange Diktate in den Einstellungen zur Ollama-Bereinigung."
     }
   },
   "appLanguage": {

@@ -7,7 +7,7 @@ use crate::managers::history::HistoryManager;
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::StreamWorkKind;
 use crate::managers::transcription::TranscriptionManager;
-use crate::settings::{get_settings, AppSettings, OverlayStyle};
+use crate::settings::{get_settings, AppSettings, OverlayStyle, PostProcessProvider};
 use crate::shortcut;
 use crate::tray::{change_tray_icon, TrayIconState};
 use crate::utils::{
@@ -29,12 +29,21 @@ struct RecordingErrorEvent {
     detail: Option<String>,
 }
 
+/// Character budget for an AFM transcript given the sidecar-reported context
+/// window (in tokens). Reserves ~65% of the window for the system prompt and
+/// the (roughly input-sized) cleaned output at ~4 chars/token, leaving ~35% for
+/// input. 4096 tokens -> ~5734 chars; 8192 (macOS 27) -> ~11468.
+#[cfg(target_os = "macos")]
+fn afm_char_cap(context_window: u32) -> usize {
+    (context_window as usize).saturating_mul(4) * 35 / 100
+}
+
 /// Maps a post-process HTTP failure to a diagnostic category. `provider_id`
 /// disambiguates "unreachable"/"missing" for the local Ollama provider
 /// ("custom") from the same failure on a cloud provider, where the toast
 /// hint ("Open Ollama...") wouldn't make sense.
 fn categorize_llm_error(provider_id: &str, e: LlmError) -> FailureCategory {
-    let is_local = provider_id == "custom";
+    let is_local = PostProcessProvider::id_is_local(provider_id);
     match e {
         LlmError::Unreachable if is_local => FailureCategory::OllamaUnreachable,
         LlmError::Unreachable => FailureCategory::PostProcessHttpError {
@@ -291,13 +300,57 @@ async fn post_process_transcription(
         return CleanupOutcome::Skipped;
     }
 
-    let provider = match settings.active_post_process_provider().cloned() {
+    #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
+    let mut provider = match settings.active_post_process_provider().cloned() {
         Some(provider) => provider,
         None => {
             debug!("Post-processing enabled but no provider is selected");
             return CleanupOutcome::Skipped;
         }
     };
+
+    // Apple Foundation Models runs through a bundled on-device sidecar. Ensure
+    // it is up, learn its live context window, and guard against transcripts
+    // that exceed it — keeping the accurate raw transcript rather than
+    // truncating (which would silently drop the tail of what the user said). If
+    // the sidecar cannot start, fall back to the raw transcript. macOS-only; the
+    // provider is never selectable elsewhere.
+    #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
+    let mut afm_token: Option<String> = None;
+    if provider.id == "afm" {
+        #[cfg(target_os = "macos")]
+        {
+            match crate::afm_setup::ensure_runtime(app).await {
+                Ok(rt) => {
+                    let cap = afm_char_cap(rt.context_window);
+                    if transcription.chars().count() > cap {
+                        debug!(
+                            "AFM cleanup skipped: transcript {} chars over {}-char cap (window {} tokens) — keeping raw transcript",
+                            transcription.chars().count(),
+                            cap,
+                            rt.context_window
+                        );
+                        diagnostics::record_failure(app, FailureCategory::AfmContextExceeded);
+                        return CleanupOutcome::Failed(FailureCategory::AfmContextExceeded);
+                    }
+                    provider.base_url = rt.base_url;
+                    afm_token = Some(rt.token);
+                }
+                Err(e) => {
+                    debug!("AFM sidecar unavailable ({e}) — keeping raw transcript");
+                    let category = FailureCategory::PostProcessHttpError {
+                        status_category: HttpStatusCategory::Unreachable,
+                    };
+                    diagnostics::record_failure(app, category);
+                    return CleanupOutcome::Failed(category);
+                }
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            return CleanupOutcome::Skipped;
+        }
+    }
 
     let tier = adaptive_tier(settings, transcription);
     if tier == Some(CleanupTier::SkipLlm) {
@@ -477,26 +530,34 @@ async fn post_process_transcription(
         provider.id, model
     );
 
-    let api_key = settings
-        .post_process_api_keys
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
+    // AFM authenticates with the sidecar's per-session bearer token (minted at
+    // spawn), not a stored key; every other provider uses its configured key.
+    let api_key = afm_token.unwrap_or_else(|| {
+        settings
+            .post_process_api_keys
+            .get(&provider.id)
+            .cloned()
+            .unwrap_or_default()
+    });
 
     // Disable reasoning for providers where post-processing rarely benefits from it.
-    // - custom: top-level reasoning_effort (works for local OpenAI-compat servers)
+    // - local (custom / afm): top-level reasoning_effort (works for local OpenAI-compat
+    //   servers; the AFM sidecar ignores it harmlessly)
     // - openrouter: nested reasoning object; exclude:true also keeps reasoning text
     //   out of the response so it can't pollute structured-output JSON parsing
-    let (reasoning_effort, reasoning) = match provider.id.as_str() {
-        "custom" => (Some("none".to_string()), None),
-        "openrouter" => (
-            None,
-            Some(crate::llm_client::ReasoningConfig {
-                effort: Some("none".to_string()),
-                exclude: Some(true),
-            }),
-        ),
-        _ => (None, None),
+    let (reasoning_effort, reasoning) = if provider.is_local() {
+        (Some("none".to_string()), None)
+    } else {
+        match provider.id.as_str() {
+            "openrouter" => (
+                None,
+                Some(crate::llm_client::ReasoningConfig {
+                    effort: Some("none".to_string()),
+                    exclude: Some(true),
+                }),
+            ),
+            _ => (None, None),
+        }
     };
 
     if provider.supports_structured_output {
@@ -593,16 +654,17 @@ async fn post_process_transcription(
 
     // Legacy mode: send prompt to the model.
     //
-    // For the local Ollama provider (custom), split into a system message
-    // (instructions) and a separate user message (the transcription). Small local
-    // models — e.g. phi4-mini — echo the instruction text back when it shares the
-    // same message as the transcript, producing garbage output. Separating them,
-    // and appending an explicit plain-prose constraint, fixes this.
+    // For local providers (Ollama's `custom` surface and the AFM sidecar), split
+    // into a system message (instructions) and a separate user message (the
+    // transcription). Small local models — e.g. phi4-mini, qwen2.5:3b, and Apple's
+    // ~3B on-device model — echo the instruction text back when it shares the same
+    // message as the transcript, producing garbage output. Separating them, and
+    // appending an explicit plain-prose constraint, fixes this.
     //
     // For other providers (anthropic, groq) keep the classic single-message
     // format: those services use larger models that do not have the echo problem,
     // and their behaviour with a combined message is already well-tested.
-    let (legacy_user_content, legacy_system) = if provider.id == "custom" {
+    let (legacy_user_content, legacy_system) = if provider.is_local() {
         // Strip ${output} and the trailing label line that introduced it (e.g.
         // "Input text to clean:"). The system message needs to be instructions
         // only; adding a dangling label or an extra constraint in the user message

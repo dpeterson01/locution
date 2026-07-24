@@ -796,7 +796,9 @@
       "whisperModelNotLoaded": "음성 인식 모델이 아직 준비되지 않았습니다 — 잠시 후 다시 시도하세요.",
       "accessibilityMissingTitle": "손쉬운 사용 접근 권한이 필요합니다",
       "accessibilityMissingHint": "시스템 설정에서 손쉬운 사용 접근 권한을 허용하기 전까지 Locution은 다른 앱에 입력할 수 없습니다.",
-      "postProcessFailed": "정리에 실패했습니다 — 원래 받아쓴 내용이 유지되었습니다."
+      "postProcessFailed": "정리에 실패했습니다 — 원래 받아쓴 내용이 유지되었습니다.",
+      "afmContextExceededTitle": "온디바이스 정리에 사용하기에는 받아쓴 내용이 너무 깁니다",
+      "afmContextExceededHint": "원래 받아쓴 내용이 유지되었습니다. 긴 받아쓰기는 설정에서 Ollama 정리로 전환하세요."
     }
   },
   "appLanguage": {

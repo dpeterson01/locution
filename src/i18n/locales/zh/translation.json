@@ -796,7 +796,9 @@
       "whisperModelNotLoaded": "语音转文字模型尚未就绪——请稍后重试。",
       "accessibilityMissingTitle": "需要辅助功能权限",
       "accessibilityMissingHint": "在你于“系统设置”中授予辅助功能权限之前，Locution 无法向其他应用输入文字。",
-      "postProcessFailed": "清理失败——已保留你的原始听写内容。"
+      "postProcessFailed": "清理失败——已保留你的原始听写内容。",
+      "afmContextExceededTitle": "听写内容过长，无法进行设备端清理",
+      "afmContextExceededHint": "已保留你的原始听写内容。较长的听写请在“设置”中切换为 Ollama 清理。"
     }
   },
   "appLanguage": {

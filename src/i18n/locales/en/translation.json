@@ -800,7 +800,9 @@
       "whisperModelNotLoaded": "Speech-to-text model isn't ready yet — try again in a moment.",
       "accessibilityMissingTitle": "Accessibility access needed",
       "accessibilityMissingHint": "Locution can't type into other apps until you grant Accessibility access in System Settings.",
-      "postProcessFailed": "Cleanup failed — your original dictation was kept."
+      "postProcessFailed": "Cleanup failed — your original dictation was kept.",
+      "afmContextExceededTitle": "Dictation too long for on-device cleanup",
+      "afmContextExceededHint": "Your original dictation was kept. For long dictations, switch to Ollama cleanup in Settings."
     }
   },
   "appLanguage": {

@@ -796,7 +796,9 @@
       "whisperModelNotLoaded": "Le modèle de reconnaissance vocale n'est pas encore prêt ; réessayez dans un instant.",
       "accessibilityMissingTitle": "Accès à l'Accessibilité requis",
       "accessibilityMissingHint": "Locution ne peut pas écrire dans d'autres applications tant que vous n'accordez pas l'accès à l'Accessibilité dans les Réglages Système.",
-      "postProcessFailed": "Le nettoyage a échoué ; votre dictée d'origine a été conservée."
+      "postProcessFailed": "Le nettoyage a échoué ; votre dictée d'origine a été conservée.",
+      "afmContextExceededTitle": "Dictée trop longue pour le nettoyage sur l'appareil",
+      "afmContextExceededHint": "Votre dictée d'origine a été conservée. Pour les longues dictées, passez au nettoyage Ollama dans les Réglages."
     }
   },
   "appLanguage": {

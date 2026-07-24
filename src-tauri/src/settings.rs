@@ -122,6 +122,26 @@ pub struct PostProcessProvider {
     pub supports_structured_output: bool,
 }
 
+impl PostProcessProvider {
+    /// Whether a provider id points at a local, on-device OpenAI-compatible
+    /// server: Ollama's `/v1` surface (`custom`) or the bundled Apple
+    /// Foundation Models sidecar (`afm`). Local providers run small models, so
+    /// they get the system/user message split (to stop instruction echo) and
+    /// local-flavored error hints ("Ollama unreachable" / "model missing")
+    /// rather than the generic cloud HTTP-error toast.
+    ///
+    /// Context injection deliberately does NOT use this predicate: it stays
+    /// `custom`-only because ~3B models (both Ollama's short tier and AFM) are
+    /// too weak to adopt injected context (see `context_active`).
+    pub fn id_is_local(id: &str) -> bool {
+        matches!(id, "custom" | "afm")
+    }
+
+    pub fn is_local(&self) -> bool {
+        Self::id_is_local(&self.id)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "lowercase")]
 pub enum OverlayPosition {
@@ -686,6 +706,30 @@ fn default_post_process_provider_id() -> String {
     "openai".to_string()
 }
 
+/// Whether Apple Foundation Models can run on this machine: macOS 26+ (the
+/// FoundationModels framework ships with Tahoe). Cached — the OS version does
+/// not change within a run. Gates whether the `afm` provider is offered at all.
+fn afm_supported() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        use std::sync::OnceLock;
+        static SUPPORTED: OnceLock<bool> = OnceLock::new();
+        *SUPPORTED.get_or_init(|| {
+            std::process::Command::new("sw_vers")
+                .arg("-productVersion")
+                .output()
+                .ok()
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+                .and_then(|s| s.trim().split('.').next().and_then(|m| m.parse::<u32>().ok()))
+                .is_some_and(|major| major >= 26)
+        })
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        false
+    }
+}
+
 fn default_post_process_providers() -> Vec<PostProcessProvider> {
     let mut providers = vec![
         PostProcessProvider {
@@ -747,6 +791,21 @@ fn default_post_process_providers() -> Vec<PostProcessProvider> {
         models_endpoint: Some("/models".to_string()),
         supports_structured_output: true,
     });
+
+    // Apple Foundation Models — bundled on-device sidecar, offered only on
+    // macOS 26+. `base_url` is nominal: actions.rs overrides it with the
+    // sidecar's live (ephemeral) loopback port at call time, and the port here
+    // is never shown (the base-URL field renders for `custom` only).
+    if afm_supported() {
+        providers.push(PostProcessProvider {
+            id: "afm".to_string(),
+            label: "Apple Foundation Models".to_string(),
+            base_url: "http://127.0.0.1:8765/v1".to_string(),
+            allow_base_url_edit: false,
+            models_endpoint: Some("/models".to_string()),
+            supports_structured_output: false,
+        });
+    }
 
     // Custom provider always comes last
     providers.push(PostProcessProvider {

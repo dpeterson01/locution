@@ -27,6 +27,7 @@ export type FailureCategory =
   | "accessibility_missing"
   | "paste_blocked_secure_field"
   | "transcription_failed"
+  | "afm_context_exceeded"
   | { post_process_http_error: { status_category: HttpStatusCategory } };
 
 export interface DiagnosticEvent {

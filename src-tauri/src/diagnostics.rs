@@ -39,6 +39,10 @@ pub enum FailureCategory {
     AccessibilityMissing,
     PasteBlockedSecureField,
     TranscriptionFailed,
+    /// Apple Foundation Models cleanup skipped because the transcript exceeds
+    /// the model's context window. The raw transcript is kept verbatim rather
+    /// than truncated; the UI nudges the user toward Ollama for long dictations.
+    AfmContextExceeded,
     PostProcessHttpError { status_category: HttpStatusCategory },
 }
 

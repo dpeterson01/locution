@@ -796,7 +796,9 @@
       "whisperModelNotLoaded": "音声認識モデルの準備がまだできていません——少し待ってからお試しください。",
       "accessibilityMissingTitle": "アクセシビリティのアクセスが必要です",
       "accessibilityMissingHint": "システム設定でアクセシビリティのアクセスを許可するまで、Locution は他のアプリに入力できません。",
-      "postProcessFailed": "クリーンアップに失敗しました——元の口述内容が保持されました。"
+      "postProcessFailed": "クリーンアップに失敗しました——元の口述内容が保持されました。",
+      "afmContextExceededTitle": "端末内クリーンアップには口述が長すぎます",
+      "afmContextExceededHint": "元の口述内容が保持されました。長い口述には、設定で Ollama クリーンアップに切り替えてください。"
     }
   },
   "appLanguage": {

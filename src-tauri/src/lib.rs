@@ -1,5 +1,7 @@
 mod actions;
 #[cfg(target_os = "macos")]
+mod afm_setup;
+#[cfg(target_os = "macos")]
 mod app_activation;
 mod audio_feedback;
 pub mod audio_toolkit;
@@ -202,6 +204,12 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     app_handle.manage(model_manager.clone());
     app_handle.manage(transcription_manager.clone());
     app_handle.manage(history_manager.clone());
+
+    // On-device Apple Foundation Models sidecar lifecycle (macOS 26+). Spawned
+    // lazily on the first AFM cleanup; the child is killed when this drops at
+    // shutdown.
+    #[cfg(target_os = "macos")]
+    app_handle.manage(crate::afm_setup::AfmManager::default());
 
     // Note: Shortcuts are NOT initialized here.
     // The frontend is responsible for calling the `initialize_shortcuts` command

@@ -239,6 +239,11 @@ function App() {
         case "post_process_http_error:timeout":
           toast.error(t("errors.diagnostics.postProcessFailed"));
           break;
+        case "afm_context_exceeded":
+          toast.info(t("errors.diagnostics.afmContextExceededTitle"), {
+            description: t("errors.diagnostics.afmContextExceededHint"),
+          });
+          break;
         default:
           // mic_permission_denied / no_input_device / transcription_failed
           // already toast via their own listeners above;

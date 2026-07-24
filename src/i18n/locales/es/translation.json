@@ -796,7 +796,9 @@
       "whisperModelNotLoaded": "El modelo de voz a texto aún no está listo; inténtalo de nuevo en un momento.",
       "accessibilityMissingTitle": "Se necesita acceso de Accesibilidad",
       "accessibilityMissingHint": "Locution no puede escribir en otras aplicaciones hasta que concedas el acceso de Accesibilidad en Ajustes del Sistema.",
-      "postProcessFailed": "La limpieza falló; se conservó tu dictado original."
+      "postProcessFailed": "La limpieza falló; se conservó tu dictado original.",
+      "afmContextExceededTitle": "Dictado demasiado largo para la limpieza en el dispositivo",
+      "afmContextExceededHint": "Se conservó tu dictado original. Para dictados largos, cambia a la limpieza con Ollama en Ajustes."
     }
   },
   "appLanguage": {
