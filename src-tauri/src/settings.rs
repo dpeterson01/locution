@@ -566,7 +566,7 @@ fn default_model() -> String {
     "".to_string()
 }
 
-const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 3;
+const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 4;
 
 fn default_settings_schema_version() -> u32 {
     CURRENT_SETTINGS_SCHEMA_VERSION
@@ -876,7 +876,7 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
             // Numbered rules (not prose) on purpose: the small fast-tier model
             // (qwen2.5:3b) reliably applies capitalization/punctuation when they
             // are explicit numbered rules, but ignores them when buried in prose.
-            prompt: "You are a precision cleaner for short speech-to-text dictation. Always return the text with correct capitalization and punctuation.\n\nRULES:\n1. Capitalize the first word of every sentence, the pronoun I, and proper nouns.\n2. Add correct terminal punctuation (period, question mark, or exclamation point) and commas where they aid reading. If the speaker is asking something, keep it worded as a question and end it with a question mark; never turn a question into a statement.\n3. Fix obvious spelling mistakes, typos, and misheard homophones (their/they're/there, your/you're, its/it's, to/too/two) using the sentence's meaning.\n4. Delete filler words like um, uh, like, and you know, along with accidental repeated words.\n5. Keep every word the speaker said, along with their own wording, slang, and jargon. Do NOT drop content, paraphrase, reword, reformat, or convert numbers.\n6. Respond with nothing but the cleaned text on a single line: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
+            prompt: "You are a precision cleaner for short speech-to-text dictation. Always return the text with correct capitalization and punctuation.\n\nRULES:\n1. Capitalize the first word of every sentence, the pronoun I, and proper nouns.\n2. Add correct terminal punctuation and commas where they aid reading. The very last character of your output MUST be a period, question mark, or exclamation point — never leave the output trailing without one. If the speaker is asking something, keep it worded as a question and end it with a question mark; never turn a question into a statement.\n3. Fix obvious spelling mistakes, typos, and misheard homophones (their/they're/there, your/you're, its/it's, to/too/two) using the sentence's meaning.\n4. Delete filler words like um, uh, like, and you know, along with accidental repeated words.\n5. Keep every word the speaker said, along with their own wording, slang, and jargon. Do NOT drop content, paraphrase, reword, reformat, or convert numbers.\n6. Respond with nothing but the cleaned text on a single line: no preamble, no explanation, no quotation marks.\n\nInput text to clean:\n\n${output}".to_string(),
             model: None,
             use_context: false,
         },
@@ -1508,6 +1508,29 @@ fn apply_settings_migrations(
                 && stored.model.as_deref() == Some(default_short_model().as_str())
             {
                 stored.model = None;
+            }
+        }
+        settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
+        updated = true;
+    }
+
+    if stored_schema_version < 4 {
+        // Refresh the Short Dictation prompt for users who have not customized it.
+        // Rule 2 now explicitly requires the final character to be terminal
+        // punctuation, fixing small models that drop the trailing period/question mark.
+        // The old v3 rule 2 contained this distinctive phrase; its presence means
+        // the user is on the unmodified default and can safely receive the refresh.
+        let new_defaults = default_post_process_prompts();
+        for stored in settings.post_process_prompts.iter_mut() {
+            if stored.id != SHORT_DICTATION_MODE_ID {
+                continue;
+            }
+            if stored.prompt.contains(
+                "(period, question mark, or exclamation point) and commas where they aid reading. If the speaker is asking",
+            ) {
+                if let Some(new_mode) = new_defaults.iter().find(|m| m.id == stored.id) {
+                    stored.prompt = new_mode.prompt.clone();
+                }
             }
         }
         settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
