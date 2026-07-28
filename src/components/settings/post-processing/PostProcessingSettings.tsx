@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Check, Download, Loader2, RefreshCcw } from "lucide-react";
 import { commands, type OllamaAvailability } from "@/bindings";
@@ -209,7 +209,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     }
   };
 
-  const handleUpdatePrompt = async () => {
+  const handleUpdatePrompt = useCallback(async () => {
     if (!selectedPromptId || !draftName.trim() || !draftText.trim()) return;
 
     try {
@@ -224,7 +224,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     } catch (error) {
       console.error("Failed to update prompt:", error);
     }
-  };
+  }, [selectedPromptId, draftName, draftText, draftUseContext, refreshSettings]);
 
   const handleDeletePrompt = async (promptId: string) => {
     if (!promptId) return;
@@ -265,6 +265,12 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     (draftName.trim() !== selectedPrompt.name ||
       draftText.trim() !== selectedPrompt.prompt.trim() ||
       draftUseContext !== (selectedPrompt.use_context ?? false));
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const timer = setTimeout(handleUpdatePrompt, 1000);
+    return () => clearTimeout(timer);
+  }, [isDirty, handleUpdatePrompt]);
 
   const contextGloballyEnabled = getSetting("context_capture_enabled") ?? false;
 
@@ -368,14 +374,6 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
             {modeUseContextField}
 
             <div className="flex gap-2 pt-2">
-              <Button
-                onClick={handleUpdatePrompt}
-                variant="primary"
-                size="md"
-                disabled={!draftName.trim() || !draftText.trim() || !isDirty}
-              >
-                {t("settings.postProcessing.prompts.updatePrompt")}
-              </Button>
               {selectedPromptId &&
                 !["mode_short_dictation", "mode_long_dictation"].includes(
                   selectedPromptId,
