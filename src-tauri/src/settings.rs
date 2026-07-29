@@ -837,6 +837,7 @@ fn default_post_process_api_keys() -> SecretMap {
 
 fn default_model_for_provider(provider_id: &str) -> String {
     match provider_id {
+        #[cfg(target_os = "macos")]
         "afm" => crate::afm_setup::AFM_MODEL_ID.to_string(),
         _ => String::new(),
     }
@@ -1677,6 +1678,7 @@ mod tests {
         assert!(settings.style_card_enabled);
     }
 
+    #[cfg(target_os = "macos")]
     #[test]
     fn afm_has_its_fixed_model_on_fresh_install() {
         let settings = get_default_settings();
@@ -1689,6 +1691,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "macos")]
     #[test]
     fn blank_afm_model_is_backfilled_without_overwriting_custom_value() {
         let mut settings = get_default_settings();
