@@ -835,8 +835,11 @@ fn default_post_process_api_keys() -> SecretMap {
     SecretMap(map)
 }
 
-fn default_model_for_provider(_provider_id: &str) -> String {
-    String::new()
+fn default_model_for_provider(provider_id: &str) -> String {
+    match provider_id {
+        "afm" => crate::afm_setup::AFM_MODEL_ID.to_string(),
+        _ => String::new(),
+    }
 }
 
 fn default_post_process_models() -> HashMap<String, String> {
@@ -1672,6 +1675,44 @@ mod tests {
             Some(DEFAULT_MODE_ID.to_string())
         );
         assert!(settings.style_card_enabled);
+    }
+
+    #[test]
+    fn afm_has_its_fixed_model_on_fresh_install() {
+        let settings = get_default_settings();
+
+        if settings.post_process_providers.iter().any(|p| p.id == "afm") {
+            assert_eq!(
+                settings.post_process_models.get("afm").map(String::as_str),
+                Some(crate::afm_setup::AFM_MODEL_ID)
+            );
+        }
+    }
+
+    #[test]
+    fn blank_afm_model_is_backfilled_without_overwriting_custom_value() {
+        let mut settings = get_default_settings();
+        if !settings.post_process_providers.iter().any(|p| p.id == "afm") {
+            return;
+        }
+
+        settings
+            .post_process_models
+            .insert("afm".to_string(), String::new());
+        assert!(ensure_post_process_defaults(&mut settings));
+        assert_eq!(
+            settings.post_process_models.get("afm").map(String::as_str),
+            Some(crate::afm_setup::AFM_MODEL_ID)
+        );
+
+        settings
+            .post_process_models
+            .insert("afm".to_string(), "custom-afm-model".to_string());
+        assert!(!ensure_post_process_defaults(&mut settings));
+        assert_eq!(
+            settings.post_process_models.get("afm").map(String::as_str),
+            Some("custom-afm-model")
+        );
     }
 
     #[test]
