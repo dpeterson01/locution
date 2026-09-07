@@ -12,6 +12,20 @@ pub use crate::clipboard::*;
 pub use crate::overlay::*;
 pub use crate::tray::*;
 
+/// Preserve diagnostic text in development builds, but redact it in releases.
+/// Do not use for secrets, which must always be redacted.
+pub fn redact_text(text: &str) -> &str {
+    redact_text_for_build(text, cfg!(debug_assertions))
+}
+
+fn redact_text_for_build(text: &str, debug_build: bool) -> &str {
+    if debug_build {
+        text
+    } else {
+        "[REDACTED]"
+    }
+}
+
 /// Centralized cancellation function that can be called from anywhere in the app.
 /// Handles cancelling both recording and transcription operations and updates UI state.
 pub fn cancel_current_operation(app: &AppHandle) {
@@ -66,4 +80,19 @@ pub fn is_kde_plasma() -> bool {
 #[cfg(target_os = "linux")]
 pub fn is_kde_wayland() -> bool {
     is_wayland() && is_kde_plasma()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redact_text_for_build;
+
+    #[test]
+    fn preserves_diagnostic_text_in_debug_builds() {
+        assert_eq!(redact_text_for_build("private transcript", true), "private transcript");
+    }
+
+    #[test]
+    fn redacts_diagnostic_text_in_release_builds() {
+        assert_eq!(redact_text_for_build("private transcript", false), "[REDACTED]");
+    }
 }

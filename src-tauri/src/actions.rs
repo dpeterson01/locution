@@ -1285,7 +1285,7 @@ impl ShortcutAction for TranscribeAction {
                             debug!(
                                 "Transcription completed in {:?}: '{}'",
                                 transcription_time.elapsed(),
-                                transcription
+                                utils::redact_text(&transcription)
                             );
 
                             // Set when the compact processing spinner was shown, so
