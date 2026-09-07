@@ -43,7 +43,9 @@ pub enum FailureCategory {
     /// the model's context window. The raw transcript is kept verbatim rather
     /// than truncated; the UI nudges the user toward Ollama for long dictations.
     AfmContextExceeded,
-    PostProcessHttpError { status_category: HttpStatusCategory },
+    PostProcessHttpError {
+        status_category: HttpStatusCategory,
+    },
 }
 
 impl fmt::Display for FailureCategory {

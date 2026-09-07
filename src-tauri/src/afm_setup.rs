@@ -60,7 +60,10 @@ pub fn os_major_version() -> Option<u32> {
     if !cfg!(target_os = "macos") {
         return None;
     }
-    let out = Command::new("sw_vers").arg("-productVersion").output().ok()?;
+    let out = Command::new("sw_vers")
+        .arg("-productVersion")
+        .output()
+        .ok()?;
     let text = String::from_utf8_lossy(&out.stdout);
     text.trim().split('.').next()?.parse().ok()
 }

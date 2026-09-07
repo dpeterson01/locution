@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Check, Download, Loader2, RefreshCcw } from "lucide-react";
 import { commands, type OllamaAvailability } from "@/bindings";
@@ -224,7 +230,13 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     } catch (error) {
       console.error("Failed to update prompt:", error);
     }
-  }, [selectedPromptId, draftName, draftText, draftUseContext, refreshSettings]);
+  }, [
+    selectedPromptId,
+    draftName,
+    draftText,
+    draftUseContext,
+    refreshSettings,
+  ]);
 
   const handleDeletePrompt = async (promptId: string) => {
     if (!promptId) return;

@@ -727,7 +727,12 @@ fn afm_supported() -> bool {
                 .output()
                 .ok()
                 .and_then(|o| String::from_utf8(o.stdout).ok())
-                .and_then(|s| s.trim().split('.').next().and_then(|m| m.parse::<u32>().ok()))
+                .and_then(|s| {
+                    s.trim()
+                        .split('.')
+                        .next()
+                        .and_then(|m| m.parse::<u32>().ok())
+                })
                 .is_some_and(|major| major >= 26)
         })
     }
@@ -1683,7 +1688,11 @@ mod tests {
     fn afm_has_its_fixed_model_on_fresh_install() {
         let settings = get_default_settings();
 
-        if settings.post_process_providers.iter().any(|p| p.id == "afm") {
+        if settings
+            .post_process_providers
+            .iter()
+            .any(|p| p.id == "afm")
+        {
             assert_eq!(
                 settings.post_process_models.get("afm").map(String::as_str),
                 Some(crate::afm_setup::AFM_MODEL_ID)
@@ -1695,7 +1704,11 @@ mod tests {
     #[test]
     fn blank_afm_model_is_backfilled_without_overwriting_custom_value() {
         let mut settings = get_default_settings();
-        if !settings.post_process_providers.iter().any(|p| p.id == "afm") {
+        if !settings
+            .post_process_providers
+            .iter()
+            .any(|p| p.id == "afm")
+        {
             return;
         }
 
