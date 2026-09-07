@@ -1,7 +1,7 @@
 use crate::input;
 use crate::settings;
 use crate::settings::{OverlayPosition, OverlayStyle};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tauri::{AppHandle, Emitter, Manager};
 
 #[cfg(not(target_os = "macos"))]
@@ -342,6 +342,8 @@ fn show_overlay_state(app_handle: &AppHandle, state: &str) {
     // Size the overlay for this state (compact vs. streaming), then position it.
     let (width, height) = overlay_dimensions(state);
     if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+        OVERLAY_SHOW_GENERATION.fetch_add(1, Ordering::SeqCst);
+
         #[cfg(target_os = "linux")]
         update_gtk_layer_shell_anchors(&overlay_window);
 
@@ -583,6 +585,8 @@ pub fn update_overlay_position(app_handle: &AppHandle) {
     }
 }
 
+static OVERLAY_SHOW_GENERATION: AtomicU64 = AtomicU64::new(0);
+
 /// Hides the recording overlay window with fade-out animation. When
 /// always-show is enabled the window returns to the idle dash pill after the
 /// fade instead of disappearing.
@@ -590,6 +594,7 @@ pub fn hide_recording_overlay(app_handle: &AppHandle) {
     // Always run the fade regardless of settings - if setting was changed while
     // recording, we still want to leave the recording state properly
     if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+        let scheduled_at = OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst);
         let settings = settings::get_settings(app_handle);
         let return_to_idle =
             settings.overlay_always_show && settings.overlay_style != OverlayStyle::None;
@@ -603,6 +608,10 @@ pub fn hide_recording_overlay(app_handle: &AppHandle) {
         let window_clone = overlay_window.clone();
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(300));
+            if OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst) != scheduled_at {
+                log::debug!("Skipping stale overlay hide: a newer session is visible");
+                return;
+            }
             if return_to_idle {
                 show_idle_overlay(&app_clone);
             } else {
