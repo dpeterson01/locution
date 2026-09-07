@@ -171,7 +171,7 @@ const settingUpdaters: {
   ort_accelerator: (value) =>
     commands.changeOrtAcceleratorSetting(value as OrtAcceleratorSetting),
   transcribe_gpu_device: (value) =>
-    commands.changeTranscribeGpuDevice(value as number),
+    commands.changeTranscribeGpuDevice(value as string | null),
   extra_recording_buffer_ms: (value) =>
     commands.changeExtraRecordingBufferSetting(value as number),
   snippets: (value) => commands.updateSnippetsSetting(value as Snippet[]),
