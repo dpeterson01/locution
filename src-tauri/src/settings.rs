@@ -502,8 +502,11 @@ pub struct AppSettings {
     pub transcribe_accelerator: TranscribeAcceleratorSetting,
     #[serde(default)]
     pub ort_accelerator: OrtAcceleratorSetting,
-    #[serde(default = "default_transcribe_gpu_device")]
-    pub transcribe_gpu_device: i32,
+    #[serde(
+        default = "default_transcribe_gpu_device",
+        deserialize_with = "deserialize_transcribe_gpu_device"
+    )]
+    pub transcribe_gpu_device: Option<String>,
     #[serde(default)]
     pub extra_recording_buffer_ms: u64,
     #[serde(default = "default_vad_enabled")]
@@ -566,7 +569,7 @@ fn default_model() -> String {
     "".to_string()
 }
 
-const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 4;
+const CURRENT_SETTINGS_SCHEMA_VERSION: u32 = 5;
 
 fn default_settings_schema_version() -> u32 {
     CURRENT_SETTINGS_SCHEMA_VERSION
@@ -949,8 +952,22 @@ fn default_style_card_enabled() -> bool {
     true
 }
 
-fn default_transcribe_gpu_device() -> i32 {
-    -1 // auto
+fn default_transcribe_gpu_device() -> Option<String> {
+    None
+}
+
+fn deserialize_transcribe_gpu_device<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match Option::<serde_json::Value>::deserialize(deserializer)? {
+        None => Ok(None),
+        Some(serde_json::Value::String(value)) => Ok(Some(value)),
+        Some(serde_json::Value::Number(_)) => Ok(None),
+        Some(_) => Err(de::Error::custom(
+            "transcribe GPU device must be a string, integer, or null",
+        )),
+    }
 }
 
 fn default_typing_tool() -> TypingTool {
@@ -1461,9 +1478,12 @@ fn apply_settings_migrations(
         // transcribe.cpp registry index. A positive legacy value can point at a
         // different GPU after CPU/accelerator/backend devices are included in
         // the registry, so reset ambiguous explicit selections to Auto once.
-        if settings.transcribe_gpu_device > 0 {
+        let had_positive_legacy_selection = settings_value
+            .get("transcribe_gpu_device")
+            .and_then(|value| value.as_i64())
+            .is_some_and(|value| value > 0);
+        if had_positive_legacy_selection {
             settings.transcribe_accelerator = TranscribeAcceleratorSetting::Auto;
-            settings.transcribe_gpu_device = default_transcribe_gpu_device();
         }
         settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
         updated = true;
@@ -1542,6 +1562,15 @@ fn apply_settings_migrations(
                 }
             }
         }
+        settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
+        updated = true;
+    }
+
+    if stored_schema_version < 5 {
+        // transcribe-cpp 0.2 replaced integer registry indices with opaque,
+        // process-local handles. Clear the old index once while preserving the
+        // accelerator preference so the backend can choose a valid GPU.
+        settings.transcribe_gpu_device = default_transcribe_gpu_device();
         settings.settings_schema_version = CURRENT_SETTINGS_SCHEMA_VERSION;
         updated = true;
     }
@@ -1918,7 +1947,6 @@ mod tests {
     fn gpu_device_migration_resets_legacy_positive_selection_to_auto() {
         let mut settings = get_default_settings();
         settings.transcribe_accelerator = TranscribeAcceleratorSetting::Gpu;
-        settings.transcribe_gpu_device = 2;
 
         let raw = serde_json::json!({
             "transcribe_accelerator": "gpu",
@@ -1941,10 +1969,27 @@ mod tests {
     }
 
     #[test]
-    fn gpu_device_migration_keeps_current_schema_positive_selection() {
+    fn gpu_device_migration_clears_v4_index_but_keeps_gpu_preference() {
+        let mut raw = serde_json::to_value(get_default_settings()).unwrap();
+        let stored = raw.as_object_mut().unwrap();
+        stored.insert("settings_schema_version".into(), serde_json::json!(4));
+        stored.insert("transcribe_accelerator".into(), serde_json::json!("gpu"));
+        stored.insert("transcribe_gpu_device".into(), serde_json::json!(2));
+        let mut settings: AppSettings = serde_json::from_value(raw.clone()).unwrap();
+
+        assert!(apply_settings_migrations(&mut settings, &raw));
+        assert_eq!(
+            settings.transcribe_accelerator,
+            TranscribeAcceleratorSetting::Gpu
+        );
+        assert_eq!(settings.transcribe_gpu_device, None);
+    }
+
+    #[test]
+    fn gpu_device_migration_keeps_current_stable_selection() {
         let mut settings = get_default_settings();
         settings.transcribe_accelerator = TranscribeAcceleratorSetting::Gpu;
-        settings.transcribe_gpu_device = 2;
+        settings.transcribe_gpu_device = Some("[\"vulkan\",\"id\",\"0000:01:00.0\"]".into());
 
         let raw = serde_json::json!({
             "settings_schema_version": CURRENT_SETTINGS_SCHEMA_VERSION,
@@ -1952,7 +1997,7 @@ mod tests {
             "whats_new_last_seen_version": default_whats_new_last_seen_version(),
             "overlay_style": "live",
             "transcribe_accelerator": "gpu",
-            "transcribe_gpu_device": 2
+            "transcribe_gpu_device": settings.transcribe_gpu_device
         });
 
         assert!(!apply_settings_migrations(&mut settings, &raw));
@@ -1960,7 +2005,10 @@ mod tests {
             settings.transcribe_accelerator,
             TranscribeAcceleratorSetting::Gpu
         );
-        assert_eq!(settings.transcribe_gpu_device, 2);
+        assert_eq!(
+            settings.transcribe_gpu_device.as_deref(),
+            Some("[\"vulkan\",\"id\",\"0000:01:00.0\"]")
+        );
     }
 
     #[test]
