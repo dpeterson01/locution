@@ -1148,7 +1148,9 @@ impl TranscriptionManager {
             for word in extra_words {
                 let word = word.trim();
                 if !word.is_empty()
-                    && !merged.iter().any(|existing| existing.eq_ignore_ascii_case(word))
+                    && !merged
+                        .iter()
+                        .any(|existing| existing.eq_ignore_ascii_case(word))
                 {
                     merged.push(word.to_string());
                 }

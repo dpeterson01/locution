@@ -293,8 +293,8 @@ mod macos {
                     "com.microsoft.Outlook" => {
                         let mut names: Vec<String> = Vec::new();
                         let mut budget: i32 = 2500;
-                        let deadline = std::time::Instant::now()
-                            + std::time::Duration::from_millis(120);
+                        let deadline =
+                            std::time::Instant::now() + std::time::Duration::from_millis(120);
                         collect_outlook_recipients(window, 0, &mut budget, deadline, &mut names);
                         names.dedup();
                         (!names.is_empty()).then(|| names.join(", "))
@@ -435,7 +435,9 @@ pub fn capture(app: &AppHandle) -> Option<ContextSnapshot> {
     let snapshot = ContextSnapshot {
         app_name: app_name.and_then(|s| sanitize(s, MAX_APP_META_CHARS)),
         bundle_id: bundle_id.and_then(|s| sanitize(s, MAX_APP_META_CHARS)),
-        selected_text: reads.selected_text.and_then(|s| sanitize(s, MAX_SELECTION_CHARS)),
+        selected_text: reads
+            .selected_text
+            .and_then(|s| sanitize(s, MAX_SELECTION_CHARS)),
         field_text: reads.field_text.and_then(sanitize_field_text),
         recipients: reads
             .recipients

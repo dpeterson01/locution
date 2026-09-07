@@ -410,8 +410,7 @@ pub fn register_reposition_observers(app: &AppHandle) {
             if center.is_null() {
                 log::warn!("overlay reposition observer: NSNotificationCenter unavailable");
             } else {
-                let name =
-                    NSString::from_str("NSApplicationDidChangeScreenParametersNotification");
+                let name = NSString::from_str("NSApplicationDidChangeScreenParametersNotification");
                 let token: Retained<AnyObject> = msg_send![
                     center,
                     addObserverForName: &*name,
