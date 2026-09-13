@@ -6,6 +6,7 @@ package-lock.json
 # Build outputs
 dist
 target
+src-tauri/afm-sidecar/.build
 *.bundle.*
 
 # Tauri
