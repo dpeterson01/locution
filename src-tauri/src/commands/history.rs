@@ -1,6 +1,6 @@
 use crate::actions::process_transcription_output;
 use crate::managers::{
-    history::{HistoryManager, PaginatedHistory},
+    history::{CleanupFeedback, HistoryEntry, HistoryManager, PaginatedHistory},
     transcription::TranscriptionManager,
 };
 use std::sync::Arc;
@@ -29,6 +29,20 @@ pub async fn toggle_history_entry_saved(
 ) -> Result<(), String> {
     history_manager
         .toggle_saved_status(id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_history_entry_feedback(
+    _app: AppHandle,
+    history_manager: State<'_, Arc<HistoryManager>>,
+    id: i64,
+    feedback: Option<CleanupFeedback>,
+) -> Result<HistoryEntry, String> {
+    history_manager
+        .set_feedback(id, feedback)
         .await
         .map_err(|e| e.to_string())
 }
