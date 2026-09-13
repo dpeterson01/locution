@@ -178,6 +178,7 @@ pub(crate) enum CleanupOutcome {
         mode_name: String,
         model: String,
         tier: Option<CleanupTier>,
+        prompt_template: String,
     },
     Skipped,
     Failed(FailureCategory),
@@ -458,6 +459,7 @@ async fn post_process_transcription(
             effective_use_context = tier_prompt.use_context;
         }
     }
+    let prompt_template = prompt.clone();
 
     // Whether this run will inject a context snapshot into the prompt.
     let context_active = effective_use_context
@@ -650,6 +652,7 @@ async fn post_process_transcription(
                                 mode_name: mode_name.clone(),
                                 model: model.clone(),
                                 tier,
+                                prompt_template,
                             };
                         } else {
                             error!("Structured output response missing 'transcription' field");
@@ -771,6 +774,7 @@ async fn post_process_transcription(
                 mode_name,
                 model,
                 tier,
+                prompt_template,
             }
         }
         Ok(None) => {
@@ -920,25 +924,17 @@ pub(crate) async fn process_transcription_output(
                 mode_name,
                 model,
                 tier,
+                prompt_template,
             } => {
                 post_processed_text = Some(text.clone());
                 final_text = text;
+                post_process_prompt = Some(prompt_template);
                 cleanup_mode = Some(CleanupModeInfo {
                     id: mode_id,
                     name: mode_name,
                     model,
                     tier,
                 });
-
-                if let Some(prompt_id) = &settings.post_process_selected_prompt_id {
-                    if let Some(prompt) = settings
-                        .post_process_prompts
-                        .iter()
-                        .find(|prompt| &prompt.id == prompt_id)
-                    {
-                        post_process_prompt = Some(prompt.prompt.clone());
-                    }
-                }
             }
             CleanupOutcome::Skipped => {}
             CleanupOutcome::Failed(category) => {

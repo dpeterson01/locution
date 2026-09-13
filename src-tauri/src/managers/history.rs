@@ -48,11 +48,40 @@ static MIGRATIONS: &[M] = &[
     M::up("ALTER TABLE transcription_history ADD COLUMN feedback_updated_at INTEGER;"),
 ];
 
+const SUCCESSFUL_CLEANUP_PREDICATE: &str = "post_processed_text IS NOT NULL
+    AND cleanup_mode_id IS NOT NULL
+    AND cleanup_mode_name IS NOT NULL
+    AND cleanup_model IS NOT NULL
+    AND cleanup_error IS NULL";
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum CleanupFeedback {
     Up,
     Down,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Type)]
+pub struct CleanupFeedbackSummary {
+    pub up: usize,
+    pub down: usize,
+    pub total: usize,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Type)]
+pub struct FeedbackDatasetRecord {
+    pub schema_version: u32,
+    pub locution_version: String,
+    pub entry_timestamp: i64,
+    pub feedback_updated_at: i64,
+    pub feedback: CleanupFeedback,
+    pub transcription_text: String,
+    pub cleaned_text: String,
+    pub cleanup_mode_id: String,
+    pub cleanup_mode_name: String,
+    pub cleanup_model: String,
+    pub cleanup_tier: Option<String>,
+    pub prompt_template: Option<String>,
 }
 
 impl CleanupFeedback {
@@ -505,17 +534,12 @@ impl HistoryManager {
         feedback: Option<CleanupFeedback>,
         updated_at: Option<i64>,
     ) -> Result<HistoryEntry> {
-        let updated = conn.execute(
+        let sql = format!(
             "UPDATE transcription_history
              SET feedback = ?1, feedback_updated_at = ?2
-             WHERE id = ?3
-               AND post_processed_text IS NOT NULL
-               AND cleanup_mode_id IS NOT NULL
-               AND cleanup_mode_name IS NOT NULL
-               AND cleanup_model IS NOT NULL
-               AND cleanup_error IS NULL",
-            params![feedback, updated_at, id],
-        )?;
+             WHERE id = ?3 AND {SUCCESSFUL_CLEANUP_PREDICATE}"
+        );
+        let updated = conn.execute(&sql, params![feedback, updated_at, id])?;
 
         if updated == 0 {
             let exists: bool = conn.query_row(
@@ -535,6 +559,85 @@ impl HistoryManager {
 
         Self::get_entry_by_id_with_conn(conn, id)?
             .ok_or_else(|| anyhow!("History entry {} not found after feedback update", id))
+    }
+
+    pub fn get_feedback_summary(&self) -> Result<CleanupFeedbackSummary> {
+        let conn = self.get_connection()?;
+        Self::get_feedback_summary_with_conn(&conn)
+    }
+
+    fn get_feedback_summary_with_conn(conn: &Connection) -> Result<CleanupFeedbackSummary> {
+        let sql = format!(
+            "SELECT
+                COALESCE(SUM(CASE WHEN feedback = 'up' THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN feedback = 'down' THEN 1 ELSE 0 END), 0),
+                COUNT(*)
+             FROM transcription_history
+             WHERE feedback IS NOT NULL
+               AND feedback_updated_at IS NOT NULL
+               AND {SUCCESSFUL_CLEANUP_PREDICATE}"
+        );
+        let (up, down, total): (i64, i64, i64) =
+            conn.query_row(&sql, [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+
+        Ok(CleanupFeedbackSummary {
+            up: usize::try_from(up)?,
+            down: usize::try_from(down)?,
+            total: usize::try_from(total)?,
+        })
+    }
+
+    pub fn get_feedback_dataset_records(
+        &self,
+        locution_version: &str,
+    ) -> Result<Vec<FeedbackDatasetRecord>> {
+        let conn = self.get_connection()?;
+        Self::get_feedback_dataset_records_with_conn(&conn, locution_version)
+    }
+
+    fn get_feedback_dataset_records_with_conn(
+        conn: &Connection,
+        locution_version: &str,
+    ) -> Result<Vec<FeedbackDatasetRecord>> {
+        let sql = format!(
+            "SELECT
+                timestamp,
+                feedback_updated_at,
+                feedback,
+                transcription_text,
+                post_processed_text,
+                cleanup_mode_id,
+                cleanup_mode_name,
+                cleanup_model,
+                cleanup_tier,
+                post_process_prompt
+             FROM transcription_history
+             WHERE feedback IS NOT NULL
+               AND feedback_updated_at IS NOT NULL
+               AND {SUCCESSFUL_CLEANUP_PREDICATE}
+             ORDER BY timestamp ASC, id ASC"
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let records = stmt
+            .query_map([], |row| {
+                Ok(FeedbackDatasetRecord {
+                    schema_version: 1,
+                    locution_version: locution_version.to_string(),
+                    entry_timestamp: row.get("timestamp")?,
+                    feedback_updated_at: row.get("feedback_updated_at")?,
+                    feedback: row.get("feedback")?,
+                    transcription_text: row.get("transcription_text")?,
+                    cleaned_text: row.get("post_processed_text")?,
+                    cleanup_mode_id: row.get("cleanup_mode_id")?,
+                    cleanup_mode_name: row.get("cleanup_mode_name")?,
+                    cleanup_model: row.get("cleanup_model")?,
+                    cleanup_tier: row.get("cleanup_tier")?,
+                    prompt_template: row.get("post_process_prompt")?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(records)
     }
 
     pub fn cleanup_old_entries(&self) -> Result<()> {
@@ -1058,5 +1161,128 @@ mod tests {
         assert_eq!(updated.transcription_text, "new raw transcript");
         assert_eq!(updated.feedback, None);
         assert_eq!(updated.feedback_updated_at, None);
+    }
+
+    #[test]
+    fn feedback_summary_and_dataset_include_only_eligible_rated_entries() {
+        let conn = setup_conn();
+        let later_id = insert_cleanup_entry(&conn, 200);
+        let earlier_id = insert_cleanup_entry(&conn, 100);
+        insert_entry(&conn, 50, "raw only", None);
+        let raw_id = conn.last_insert_rowid();
+        conn.execute(
+            "UPDATE transcription_history
+             SET feedback = 'up', feedback_updated_at = 60
+             WHERE id = ?1",
+            [raw_id],
+        )
+        .expect("seed ineligible feedback");
+
+        HistoryManager::set_feedback_with_conn(
+            &conn,
+            later_id,
+            Some(CleanupFeedback::Down),
+            Some(220),
+        )
+        .expect("rate later cleanup");
+        HistoryManager::set_feedback_with_conn(
+            &conn,
+            earlier_id,
+            Some(CleanupFeedback::Up),
+            Some(120),
+        )
+        .expect("rate earlier cleanup");
+
+        let summary =
+            HistoryManager::get_feedback_summary_with_conn(&conn).expect("summarize feedback");
+        assert_eq!(
+            summary,
+            CleanupFeedbackSummary {
+                up: 1,
+                down: 1,
+                total: 2,
+            }
+        );
+
+        let records = HistoryManager::get_feedback_dataset_records_with_conn(&conn, "0.1.50")
+            .expect("load feedback dataset");
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].entry_timestamp, 100);
+        assert_eq!(records[0].feedback, CleanupFeedback::Up);
+        assert_eq!(records[0].feedback_updated_at, 120);
+        assert_eq!(records[0].transcription_text, "raw transcript");
+        assert_eq!(records[0].cleaned_text, "cleaned transcript");
+        assert_eq!(records[0].cleanup_mode_id, "clean_up");
+        assert_eq!(records[0].cleanup_mode_name, "Clean up");
+        assert_eq!(records[0].cleanup_model, "test-model");
+        assert_eq!(records[0].cleanup_tier.as_deref(), Some("long"));
+        assert_eq!(
+            records[0].prompt_template.as_deref(),
+            Some("Clean this: ${output}")
+        );
+        assert_eq!(records[1].entry_timestamp, 200);
+        assert_eq!(records[1].feedback, CleanupFeedback::Down);
+        assert!(records.iter().all(|record| record.schema_version == 1));
+        assert!(records
+            .iter()
+            .all(|record| record.locution_version == "0.1.50"));
+
+        let serialized = serde_json::to_value(&records[0]).expect("serialize feedback record");
+        assert_eq!(serialized["cleanup_tier"], "long");
+        assert_eq!(serialized["prompt_template"], "Clean this: ${output}");
+    }
+
+    #[test]
+    fn empty_feedback_summary_returns_zero_counts() {
+        let conn = setup_conn();
+
+        let summary = HistoryManager::get_feedback_summary_with_conn(&conn)
+            .expect("summarize empty feedback");
+
+        assert_eq!(
+            summary,
+            CleanupFeedbackSummary {
+                up: 0,
+                down: 0,
+                total: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn feedback_dataset_orders_equal_timestamps_by_entry_id() {
+        let conn = setup_conn();
+        let first_id = insert_cleanup_entry(&conn, 100);
+        let second_id = insert_cleanup_entry(&conn, 100);
+        conn.execute(
+            "UPDATE transcription_history SET transcription_text = ?1 WHERE id = ?2",
+            params!["first", first_id],
+        )
+        .expect("label first entry");
+        conn.execute(
+            "UPDATE transcription_history SET transcription_text = ?1 WHERE id = ?2",
+            params!["second", second_id],
+        )
+        .expect("label second entry");
+        HistoryManager::set_feedback_with_conn(
+            &conn,
+            first_id,
+            Some(CleanupFeedback::Up),
+            Some(110),
+        )
+        .expect("rate first entry");
+        HistoryManager::set_feedback_with_conn(
+            &conn,
+            second_id,
+            Some(CleanupFeedback::Down),
+            Some(120),
+        )
+        .expect("rate second entry");
+
+        let records = HistoryManager::get_feedback_dataset_records_with_conn(&conn, "test")
+            .expect("load ordered dataset");
+
+        assert_eq!(records[0].transcription_text, "first");
+        assert_eq!(records[1].transcription_text, "second");
     }
 }

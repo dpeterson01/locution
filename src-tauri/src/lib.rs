@@ -739,6 +739,8 @@ pub fn run(cli_args: CliArgs) {
             commands::history::get_history_entries,
             commands::history::toggle_history_entry_saved,
             commands::history::set_history_entry_feedback,
+            commands::history::get_cleanup_feedback_summary,
+            commands::history::export_cleanup_feedback,
             commands::history::get_audio_file_path,
             commands::history::delete_history_entry,
             commands::history::retry_history_entry_transcription,

@@ -1014,6 +1014,22 @@ async setHistoryEntryFeedback(id: number, feedback: CleanupFeedback | null) : Pr
     else return { status: "error", error: e  as any };
 }
 },
+async getCleanupFeedbackSummary() : Promise<Result<CleanupFeedbackSummary, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cleanup_feedback_summary") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async exportCleanupFeedback(destPath: string) : Promise<Result<number, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_cleanup_feedback", { destPath }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getAudioFilePath(fileName: string) : Promise<Result<string, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_audio_file_path", { fileName }) };
@@ -1190,6 +1206,7 @@ export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AvailableAccelerators = { transcribe: string[]; ort: string[]; gpu_devices: GpuDeviceOption[] }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 export type CleanupFeedback = "up" | "down"
+export type CleanupFeedbackSummary = { up: number; down: number; total: number }
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
 export type EngineType = 
