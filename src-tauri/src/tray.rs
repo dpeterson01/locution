@@ -333,6 +333,8 @@ mod tests {
             cleanup_model: None,
             cleanup_tier: None,
             cleanup_error: None,
+            feedback: None,
+            feedback_updated_at: None,
         }
     }
 

@@ -608,7 +608,20 @@
       "transcriptionFailed": "转录失败。您可以使用重试图标重新转录。",
       "rawText": "原始",
       "cleanedText": "已清理",
-      "cleanupFailed": "清理失败"
+      "cleanupFailed": "清理失败",
+      "thumbsUp": "将清理结果标记为有帮助",
+      "thumbsDown": "将清理结果标记为没有帮助",
+      "feedbackError": "无法更新反馈，请重试。",
+      "feedbackExport": {
+        "button": "导出反馈",
+        "exporting": "正在导出...",
+        "noData": "没有可导出的清理反馈。",
+        "confirmationTitle": "导出清理反馈？",
+        "confirmation": "要导出 {{up}} 条好评和 {{down}} 条差评吗？本地文件将包含完整的听写文本和清理后文本，其中可能含有敏感信息。",
+        "fileType": "JSON Lines",
+        "success": "已导出 {{count}} 条反馈。",
+        "failure": "无法导出清理反馈，请重试。"
+      }
     },
     "debug": {
       "title": "调试",

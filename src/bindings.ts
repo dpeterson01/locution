@@ -1006,6 +1006,30 @@ async toggleHistoryEntrySaved(id: number) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async setHistoryEntryFeedback(id: number, feedback: CleanupFeedback | null) : Promise<Result<HistoryEntry, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_history_entry_feedback", { id, feedback }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getCleanupFeedbackSummary() : Promise<Result<CleanupFeedbackSummary, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cleanup_feedback_summary") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async exportCleanupFeedback(destPath: string) : Promise<Result<number, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_cleanup_feedback", { destPath }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getAudioFilePath(fileName: string) : Promise<Result<string, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_audio_file_path", { fileName }) };
@@ -1107,7 +1131,7 @@ ollama_setup_status?: OllamaSetupStatus; always_on_microphone?: boolean; selecte
  * dropdown, tray, and overlay Modes popover). A per-app rule never
  * writes this — only the runtime `post_process_selected_prompt_id`.
  */
-default_mode_id?: string | null; 
+default_mode_id?: string | null;
 /**
  * One-shot guard so `default_mode_id` is backfilled from the user's
  * current mode (not reset to Clean up) exactly once when upgrading a
@@ -1181,6 +1205,8 @@ export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AvailableAccelerators = { transcribe: string[]; ort: string[]; gpu_devices: GpuDeviceOption[] }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
+export type CleanupFeedback = "up" | "down"
+export type CleanupFeedbackSummary = { up: number; down: number; total: number }
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
 export type EngineType = 
@@ -1191,7 +1217,7 @@ export type EngineType =
  */
 "TranscribeCpp" | "Parakeet" | "Moonshine" | "MoonshineStreaming" | "SenseVoice" | "GigaAM" | "Canary" | "Cohere"
 export type GpuDeviceOption = { id: string; name: string; total_vram_mb: number }
-export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean; cleanup_mode_id: string | null; cleanup_mode_name: string | null; cleanup_model: string | null; cleanup_tier: string | null; cleanup_error: string | null }
+export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean; cleanup_mode_id: string | null; cleanup_mode_name: string | null; cleanup_model: string | null; cleanup_tier: string | null; cleanup_error: string | null; feedback: CleanupFeedback | null; feedback_updated_at: number | null }
 export type HistoryUpdatePayload = { action: "added"; entry: HistoryEntry } | { action: "updated"; entry: HistoryEntry } | { action: "deleted"; id: number } | { action: "toggled"; id: number }
 export type KeyboardImplementation = "tauri" | "handy_keys"
 export type LLMPrompt = { id: string; name: string; prompt: string; 

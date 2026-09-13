@@ -88,11 +88,17 @@ mod tests {
 
     #[test]
     fn preserves_diagnostic_text_in_debug_builds() {
-        assert_eq!(redact_text_for_build("private transcript", true), "private transcript");
+        assert_eq!(
+            redact_text_for_build("private transcript", true),
+            "private transcript"
+        );
     }
 
     #[test]
     fn redacts_diagnostic_text_in_release_builds() {
-        assert_eq!(redact_text_for_build("private transcript", false), "[REDACTED]");
+        assert_eq!(
+            redact_text_for_build("private transcript", false),
+            "[REDACTED]"
+        );
     }
 }

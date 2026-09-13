@@ -105,6 +105,31 @@ fn strip_invisible_chars(s: &str) -> String {
     s.replace(['\u{200B}', '\u{200C}', '\u{200D}', '\u{FEFF}'], "")
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CleanupOutputRejection {
+    Empty,
+    ExcessiveExpansion,
+}
+
+fn validate_cleanup_output(
+    transcription: &str,
+    output: &str,
+) -> Result<String, CleanupOutputRejection> {
+    let cleaned = strip_invisible_chars(output);
+    if cleaned.trim().is_empty() {
+        return Err(CleanupOutputRejection::Empty);
+    }
+
+    let input_chars = transcription.chars().count();
+    let output_chars = cleaned.chars().count();
+    let allowed_addition = (input_chars / 4).max(32);
+    if output_chars > input_chars.saturating_add(allowed_addition) {
+        return Err(CleanupOutputRejection::ExcessiveExpansion);
+    }
+
+    Ok(cleaned)
+}
+
 /// Build a system prompt from the user's prompt template.
 /// Removes `${output}` placeholder since the transcription is sent as the user message.
 fn build_system_prompt(prompt_template: &str) -> String {
@@ -153,6 +178,7 @@ pub(crate) enum CleanupOutcome {
         mode_name: String,
         model: String,
         tier: Option<CleanupTier>,
+        prompt_template: String,
     },
     Skipped,
     Failed(FailureCategory),
@@ -433,6 +459,7 @@ async fn post_process_transcription(
             effective_use_context = tier_prompt.use_context;
         }
     }
+    let prompt_template = prompt.clone();
 
     // Whether this run will inject a context snapshot into the prompt.
     let context_active = effective_use_context
@@ -598,11 +625,26 @@ async fn post_process_transcription(
                         if let Some(transcription_value) =
                             json.get(TRANSCRIPTION_FIELD).and_then(|t| t.as_str())
                         {
-                            let result = strip_invisible_chars(transcription_value);
+                            let result = match validate_cleanup_output(
+                                transcription,
+                                transcription_value,
+                            ) {
+                                Ok(result) => result,
+                                Err(reason) => {
+                                    warn!(
+                                        "Rejected structured cleanup output from provider '{}': {:?} (input_chars={}, output_chars={})",
+                                        provider.id,
+                                        reason,
+                                        transcription.chars().count(),
+                                        transcription_value.chars().count()
+                                    );
+                                    return CleanupOutcome::Skipped;
+                                }
+                            };
                             debug!(
                                 "Structured output post-processing succeeded for provider '{}'. Output length: {} chars",
                                 provider.id,
-                                result.len()
+                                result.chars().count()
                             );
                             return CleanupOutcome::Cleaned {
                                 text: result,
@@ -610,30 +652,19 @@ async fn post_process_transcription(
                                 mode_name: mode_name.clone(),
                                 model: model.clone(),
                                 tier,
+                                prompt_template,
                             };
                         } else {
                             error!("Structured output response missing 'transcription' field");
-                            return CleanupOutcome::Cleaned {
-                                text: strip_invisible_chars(&content),
-                                mode_id: mode_id.clone(),
-                                mode_name: mode_name.clone(),
-                                model: model.clone(),
-                                tier,
-                            };
+                            return CleanupOutcome::Skipped;
                         }
                     }
                     Err(e) => {
                         error!(
-                            "Failed to parse structured output JSON: {}. Returning raw content.",
+                            "Failed to parse structured output JSON: {}. Keeping raw transcript.",
                             e
                         );
-                        return CleanupOutcome::Cleaned {
-                            text: strip_invisible_chars(&content),
-                            mode_id: mode_id.clone(),
-                            mode_name: mode_name.clone(),
-                            model: model.clone(),
-                            tier,
-                        };
+                        return CleanupOutcome::Skipped;
                     }
                 }
             }
@@ -719,11 +750,23 @@ async fn post_process_transcription(
     .await
     {
         Ok(Some(content)) => {
-            let content = strip_invisible_chars(&content);
+            let content = match validate_cleanup_output(transcription, &content) {
+                Ok(content) => content,
+                Err(reason) => {
+                    warn!(
+                        "Rejected cleanup output from provider '{}': {:?} (input_chars={}, output_chars={})",
+                        provider.id,
+                        reason,
+                        transcription.chars().count(),
+                        content.chars().count()
+                    );
+                    return CleanupOutcome::Skipped;
+                }
+            };
             debug!(
                 "LLM post-processing succeeded for provider '{}'. Output length: {} chars",
                 provider.id,
-                content.len()
+                content.chars().count()
             );
             CleanupOutcome::Cleaned {
                 text: content,
@@ -731,6 +774,7 @@ async fn post_process_transcription(
                 mode_name,
                 model,
                 tier,
+                prompt_template,
             }
         }
         Ok(None) => {
@@ -880,25 +924,17 @@ pub(crate) async fn process_transcription_output(
                 mode_name,
                 model,
                 tier,
+                prompt_template,
             } => {
                 post_processed_text = Some(text.clone());
                 final_text = text;
+                post_process_prompt = Some(prompt_template);
                 cleanup_mode = Some(CleanupModeInfo {
                     id: mode_id,
                     name: mode_name,
                     model,
                     tier,
                 });
-
-                if let Some(prompt_id) = &settings.post_process_selected_prompt_id {
-                    if let Some(prompt) = settings
-                        .post_process_prompts
-                        .iter()
-                        .find(|prompt| &prompt.id == prompt_id)
-                    {
-                        post_process_prompt = Some(prompt.prompt.clone());
-                    }
-                }
             }
             CleanupOutcome::Skipped => {}
             CleanupOutcome::Failed(category) => {
@@ -1580,7 +1616,10 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 
 #[cfg(test)]
 mod tests {
-    use super::{build_style_guidance_block, is_blank_transcription};
+    use super::{
+        build_style_guidance_block, is_blank_transcription, validate_cleanup_output,
+        CleanupOutputRejection,
+    };
     use crate::settings::get_default_settings;
 
     #[test]
@@ -1594,6 +1633,58 @@ mod tests {
     fn non_blank_transcription_is_kept() {
         assert!(!is_blank_transcription("hello"));
         assert!(!is_blank_transcription("  hello  "));
+    }
+
+    #[test]
+    fn cleanup_output_accepts_normal_mechanical_edits() {
+        let input = "can you review the latest change";
+        let output = "Can you review the latest change?";
+
+        assert_eq!(
+            validate_cleanup_output(input, output),
+            Ok(output.to_string())
+        );
+    }
+
+    #[test]
+    fn cleanup_output_accepts_bounded_note_formatting() {
+        let input = "release checklist test the build then update the notes";
+        let output = "## Release checklist\n\n- Test the build.\n- Update the notes.";
+
+        assert_eq!(
+            validate_cleanup_output(input, output),
+            Ok(output.to_string())
+        );
+    }
+
+    #[test]
+    fn cleanup_output_rejects_answer_sized_expansion() {
+        let input = "what does this identifier mean";
+        let output = "This identifier refers to a specific resource and is commonly used to look up more details.";
+
+        assert_eq!(
+            validate_cleanup_output(input, output),
+            Err(CleanupOutputRejection::ExcessiveExpansion)
+        );
+    }
+
+    #[test]
+    fn cleanup_output_rejects_runaway_expansion() {
+        let input = "Please clean up this question while preserving exactly what the speaker asked and without answering it.";
+        let output = "A detailed answer that was never dictated. ".repeat(20);
+
+        assert_eq!(
+            validate_cleanup_output(input, &output),
+            Err(CleanupOutputRejection::ExcessiveExpansion)
+        );
+    }
+
+    #[test]
+    fn cleanup_output_rejects_empty_response() {
+        assert_eq!(
+            validate_cleanup_output("keep this text", "\u{200B}\n "),
+            Err(CleanupOutputRejection::Empty)
+        );
     }
 
     #[test]

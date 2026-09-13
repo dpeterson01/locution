@@ -1,12 +1,24 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { ask, save } from "@tauri-apps/plugin-dialog";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { Check, Copy, FolderOpen, RotateCcw, Star, Trash2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  FolderOpen,
+  RotateCcw,
+  Star,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   commands,
   events,
+  type CleanupFeedback,
   type HistoryEntry,
   type HistoryUpdatePayload,
 } from "@/bindings";
@@ -20,17 +32,32 @@ const IconButton: React.FC<{
   title: string;
   disabled?: boolean;
   active?: boolean;
+  activeTone?: "default" | "positive" | "negative";
   children: React.ReactNode;
-}> = ({ onClick, title, disabled, active, children }) => (
+}> = ({
+  onClick,
+  title,
+  disabled,
+  active,
+  activeTone = "default",
+  children,
+}) => (
   <button
+    type="button"
     onClick={onClick}
     disabled={disabled}
     className={`p-1.5 rounded-md flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed disabled:text-text/20 ${
       active
-        ? "text-logo-primary hover:text-logo-primary/80"
+        ? activeTone === "positive"
+          ? "text-green-600 hover:text-green-500 dark:text-green-400"
+          : activeTone === "negative"
+            ? "text-red-600 hover:text-red-500 dark:text-red-400"
+            : "text-logo-primary hover:text-logo-primary/80"
         : "text-text/50 hover:text-logo-primary"
     }`}
     title={title}
+    aria-label={title}
+    aria-pressed={active}
   >
     {children}
   </button>
@@ -65,6 +92,7 @@ export const HistorySettings: React.FC = () => {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const entriesRef = useRef<HistoryEntry[]>([]);
   const loadingRef = useRef(false);
@@ -234,6 +262,68 @@ export const HistorySettings: React.FC = () => {
     }
   };
 
+  const setFeedback = async (id: number, feedback: CleanupFeedback | null) => {
+    const result = await commands.setHistoryEntryFeedback(id, feedback);
+    if (result.status !== "ok") {
+      throw new Error(String(result.error));
+    }
+    setEntries((prev) =>
+      prev.map((entry) => (entry.id === id ? result.data : entry)),
+    );
+  };
+
+  const exportFeedback = async () => {
+    setExporting(true);
+    try {
+      const summaryResult = await commands.getCleanupFeedbackSummary();
+      if (summaryResult.status !== "ok") {
+        throw new Error(String(summaryResult.error));
+      }
+
+      const { up, down, total } = summaryResult.data;
+      if (total === 0) {
+        toast.info(t("settings.history.feedbackExport.noData"));
+        return;
+      }
+
+      const confirmed = await ask(
+        t("settings.history.feedbackExport.confirmation", { up, down }),
+        {
+          title: t("settings.history.feedbackExport.confirmationTitle"),
+          kind: "warning",
+        },
+      );
+      if (!confirmed) return;
+
+      const date = new Date().toISOString().slice(0, 10);
+      const destPath = await save({
+        defaultPath: `locution-cleanup-feedback-${date}.jsonl`,
+        filters: [
+          {
+            name: t("settings.history.feedbackExport.fileType"),
+            extensions: ["jsonl"],
+          },
+        ],
+      });
+      if (!destPath) return;
+
+      const exportResult = await commands.exportCleanupFeedback(destPath);
+      if (exportResult.status !== "ok") {
+        throw new Error(String(exportResult.error));
+      }
+      toast.success(
+        t("settings.history.feedbackExport.success", {
+          count: exportResult.data,
+        }),
+      );
+    } catch (error) {
+      console.error("Failed to export cleanup feedback:", error);
+      toast.error(t("settings.history.feedbackExport.failure"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   let content: React.ReactNode;
 
   if (loading) {
@@ -261,6 +351,7 @@ export const HistorySettings: React.FC = () => {
               getAudioUrl={getAudioUrl}
               deleteAudio={deleteAudioEntry}
               retryTranscription={retryHistoryEntry}
+              setFeedback={setFeedback}
             />
           ))}
         </div>
@@ -273,16 +364,33 @@ export const HistorySettings: React.FC = () => {
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <div className="space-y-2">
-        <div className="px-4 flex items-center justify-between">
+        <div className="px-4 flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h2 className="text-xs font-medium text-mid-gray uppercase tracking-wide">
               {t("settings.history.title")}
             </h2>
           </div>
-          <OpenRecordingsButton
-            onClick={openRecordingsFolder}
-            label={t("settings.history.openFolder")}
-          />
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+            <Button
+              onClick={exportFeedback}
+              variant="secondary"
+              size="sm"
+              disabled={exporting}
+              className="flex items-center gap-2"
+              title={t("settings.history.feedbackExport.button")}
+            >
+              <Download className="w-4 h-4" />
+              <span>
+                {exporting
+                  ? t("settings.history.feedbackExport.exporting")
+                  : t("settings.history.feedbackExport.button")}
+              </span>
+            </Button>
+            <OpenRecordingsButton
+              onClick={openRecordingsFolder}
+              label={t("settings.history.openFolder")}
+            />
+          </div>
         </div>
         <div className="bg-background border border-mid-gray/20 rounded-lg overflow-visible">
           {content}
@@ -299,6 +407,7 @@ interface HistoryEntryProps {
   getAudioUrl: (fileName: string) => Promise<string | null>;
   deleteAudio: (id: number) => Promise<void>;
   retryTranscription: (id: number) => Promise<void>;
+  setFeedback: (id: number, feedback: CleanupFeedback | null) => Promise<void>;
 }
 
 const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
@@ -308,10 +417,12 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
   getAudioUrl,
   deleteAudio,
   retryTranscription,
+  setFeedback,
 }) => {
   const { t, i18n } = useTranslation();
   const [showCopied, setShowCopied] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [ratingPending, setRatingPending] = useState(false);
 
   const hasTranscription = entry.transcription_text.trim().length > 0;
 
@@ -351,6 +462,21 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     }
   };
 
+  const handleFeedback = async (feedback: CleanupFeedback) => {
+    setRatingPending(true);
+    try {
+      await setFeedback(
+        entry.id,
+        entry.feedback === feedback ? null : feedback,
+      );
+    } catch (error) {
+      console.error("Failed to update cleanup feedback:", error);
+      toast.error(t("settings.history.feedbackError"));
+    } finally {
+      setRatingPending(false);
+    }
+  };
+
   const formattedDate = formatDateTime(String(entry.timestamp), i18n.language);
 
   // Mode badge: "name · Tier · model" (tier shown only when the adaptive
@@ -384,12 +510,48 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     entry.post_processed_text !== entry.transcription_text
       ? entry.post_processed_text
       : null;
+  const canRate =
+    entry.post_processed_text !== null &&
+    entry.cleanup_mode_id !== null &&
+    entry.cleanup_mode_name !== null &&
+    entry.cleanup_model !== null &&
+    entry.cleanup_error === null;
 
   return (
     <div className="px-4 py-2 pb-5 flex flex-col gap-3">
-      <div className="flex justify-between items-center">
-        <p className="text-sm font-medium">{formattedDate}</p>
-        <div className="flex items-center">
+      <div className="flex justify-between items-start gap-2 flex-wrap">
+        <p className="text-sm font-medium w-full sm:w-auto">{formattedDate}</p>
+        <div className="flex items-center justify-end ml-auto">
+          {canRate && (
+            <>
+              <IconButton
+                onClick={() => handleFeedback("up")}
+                disabled={retrying || ratingPending}
+                active={entry.feedback === "up"}
+                activeTone="positive"
+                title={t("settings.history.thumbsUp")}
+              >
+                <ThumbsUp
+                  width={16}
+                  height={16}
+                  fill={entry.feedback === "up" ? "currentColor" : "none"}
+                />
+              </IconButton>
+              <IconButton
+                onClick={() => handleFeedback("down")}
+                disabled={retrying || ratingPending}
+                active={entry.feedback === "down"}
+                activeTone="negative"
+                title={t("settings.history.thumbsDown")}
+              >
+                <ThumbsDown
+                  width={16}
+                  height={16}
+                  fill={entry.feedback === "down" ? "currentColor" : "none"}
+                />
+              </IconButton>
+            </>
+          )}
           <IconButton
             onClick={handleCopyText}
             disabled={!hasTranscription || retrying}

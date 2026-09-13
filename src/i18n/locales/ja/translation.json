@@ -608,7 +608,20 @@
       "transcriptionFailed": "文字起こしに失敗しました。リトライアイコンを使用して再文字起こしできます。",
       "rawText": "元のまま",
       "cleanedText": "クリーンアップ済み",
-      "cleanupFailed": "クリーンアップ失敗"
+      "cleanupFailed": "クリーンアップ失敗",
+      "thumbsUp": "クリーンアップを高く評価",
+      "thumbsDown": "クリーンアップを低く評価",
+      "feedbackError": "評価を更新できませんでした。もう一度お試しください。",
+      "feedbackExport": {
+        "button": "評価をエクスポート",
+        "exporting": "エクスポート中...",
+        "noData": "エクスポートするクリーンアップ評価がありません。",
+        "confirmationTitle": "クリーンアップ評価をエクスポートしますか？",
+        "confirmation": "高評価 {{up}} 件と低評価 {{down}} 件をエクスポートしますか？ローカルファイルには、機密情報を含む可能性がある入力全文とクリーンアップ後の全文が保存されます。",
+        "fileType": "JSON Lines",
+        "success": "{{count}} 件の評価をエクスポートしました。",
+        "failure": "クリーンアップ評価をエクスポートできませんでした。もう一度お試しください。"
+      }
     },
     "debug": {
       "title": "デバッグ",

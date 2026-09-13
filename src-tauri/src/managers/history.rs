@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local, Utc};
 use log::{debug, error, info};
+use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSqlOutput, ValueRef};
 use rusqlite::{params, Connection, OptionalExtension};
 use rusqlite_migration::{Migrations, M};
 use serde::{Deserialize, Serialize};
@@ -40,7 +41,75 @@ static MIGRATIONS: &[M] = &[
     M::up("ALTER TABLE transcription_history ADD COLUMN cleanup_model TEXT;"),
     M::up("ALTER TABLE transcription_history ADD COLUMN cleanup_tier TEXT;"),
     M::up("ALTER TABLE transcription_history ADD COLUMN cleanup_error TEXT;"),
+    M::up(
+        "ALTER TABLE transcription_history ADD COLUMN feedback TEXT
+         CHECK (feedback IN ('up', 'down') OR feedback IS NULL);",
+    ),
+    M::up("ALTER TABLE transcription_history ADD COLUMN feedback_updated_at INTEGER;"),
 ];
+
+const SUCCESSFUL_CLEANUP_PREDICATE: &str = "post_processed_text IS NOT NULL
+    AND cleanup_mode_id IS NOT NULL
+    AND cleanup_mode_name IS NOT NULL
+    AND cleanup_model IS NOT NULL
+    AND cleanup_error IS NULL";
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum CleanupFeedback {
+    Up,
+    Down,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Type)]
+pub struct CleanupFeedbackSummary {
+    pub up: usize,
+    pub down: usize,
+    pub total: usize,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Type)]
+pub struct FeedbackDatasetRecord {
+    pub schema_version: u32,
+    pub locution_version: String,
+    pub entry_timestamp: i64,
+    pub feedback_updated_at: i64,
+    pub feedback: CleanupFeedback,
+    pub transcription_text: String,
+    pub cleaned_text: String,
+    pub cleanup_mode_id: String,
+    pub cleanup_mode_name: String,
+    pub cleanup_model: String,
+    pub cleanup_tier: Option<String>,
+    pub prompt_template: Option<String>,
+}
+
+impl CleanupFeedback {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Up => "up",
+            Self::Down => "down",
+        }
+    }
+}
+
+impl rusqlite::ToSql for CleanupFeedback {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Borrowed(ValueRef::Text(
+            self.as_str().as_bytes(),
+        )))
+    }
+}
+
+impl FromSql for CleanupFeedback {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        match value.as_str()? {
+            "up" => Ok(Self::Up),
+            "down" => Ok(Self::Down),
+            _ => Err(FromSqlError::InvalidType),
+        }
+    }
+}
 
 /// Cleanup metadata persisted alongside a history entry. Grouped into one
 /// struct so `save_entry`/`update_transcription` don't grow a long positional
@@ -94,6 +163,8 @@ pub struct HistoryEntry {
     pub cleanup_model: Option<String>,
     pub cleanup_tier: Option<String>,
     pub cleanup_error: Option<String>,
+    pub feedback: Option<CleanupFeedback>,
+    pub feedback_updated_at: Option<i64>,
 }
 
 pub struct HistoryManager {
@@ -243,7 +314,35 @@ impl HistoryManager {
             cleanup_model: row.get("cleanup_model")?,
             cleanup_tier: row.get("cleanup_tier")?,
             cleanup_error: row.get("cleanup_error")?,
+            feedback: row.get("feedback")?,
+            feedback_updated_at: row.get("feedback_updated_at")?,
         })
+    }
+
+    fn get_entry_by_id_with_conn(conn: &Connection, id: i64) -> Result<Option<HistoryEntry>> {
+        let mut stmt = conn.prepare(
+            "SELECT
+                id,
+                file_name,
+                timestamp,
+                saved,
+                title,
+                transcription_text,
+                post_processed_text,
+                post_process_prompt,
+                post_process_requested,
+                cleanup_mode_id,
+                cleanup_mode_name,
+                cleanup_model,
+                cleanup_tier,
+                cleanup_error,
+                feedback,
+                feedback_updated_at
+             FROM transcription_history
+             WHERE id = ?1",
+        )?;
+
+        Ok(stmt.query_row([id], Self::map_history_entry).optional()?)
     }
 
     pub fn recordings_dir(&self) -> &std::path::Path {
@@ -313,6 +412,8 @@ impl HistoryManager {
             cleanup_model: cleanup.model,
             cleanup_tier: cleanup.tier,
             cleanup_error: cleanup.error,
+            feedback: None,
+            feedback_updated_at: None,
         };
 
         debug!("Saved history entry with id {}", entry.id);
@@ -341,6 +442,36 @@ impl HistoryManager {
         cleanup: CleanupRecord,
     ) -> Result<HistoryEntry> {
         let conn = self.get_connection()?;
+        let entry = Self::update_transcription_with_conn(
+            &conn,
+            id,
+            transcription_text,
+            post_processed_text,
+            post_process_prompt,
+            cleanup,
+        )?;
+
+        debug!("Updated transcription for history entry {}", id);
+
+        if let Err(e) = (HistoryUpdatePayload::Updated {
+            entry: entry.clone(),
+        })
+        .emit(&self.app_handle)
+        {
+            error!("Failed to emit history-updated event: {}", e);
+        }
+
+        Ok(entry)
+    }
+
+    fn update_transcription_with_conn(
+        conn: &Connection,
+        id: i64,
+        transcription_text: String,
+        post_processed_text: Option<String>,
+        post_process_prompt: Option<String>,
+        cleanup: CleanupRecord,
+    ) -> Result<HistoryEntry> {
         let updated = conn.execute(
             "UPDATE transcription_history
              SET transcription_text = ?1,
@@ -350,7 +481,9 @@ impl HistoryManager {
                  cleanup_mode_name = ?5,
                  cleanup_model = ?6,
                  cleanup_tier = ?7,
-                 cleanup_error = ?8
+                 cleanup_error = ?8,
+                 feedback = NULL,
+                 feedback_updated_at = NULL
              WHERE id = ?9",
             params![
                 transcription_text,
@@ -369,15 +502,20 @@ impl HistoryManager {
             return Err(anyhow!("History entry {} not found", id));
         }
 
-        let entry = conn
-            .query_row(
-                "SELECT id, file_name, timestamp, saved, title, transcription_text, post_processed_text, post_process_prompt, post_process_requested, cleanup_mode_id, cleanup_mode_name, cleanup_model, cleanup_tier, cleanup_error
-                 FROM transcription_history WHERE id = ?1",
-                params![id],
-                Self::map_history_entry,
-            )?;
+        Self::get_entry_by_id_with_conn(conn, id)?
+            .ok_or_else(|| anyhow!("History entry {} not found after update", id))
+    }
 
-        debug!("Updated transcription for history entry {}", id);
+    pub async fn set_feedback(
+        &self,
+        id: i64,
+        feedback: Option<CleanupFeedback>,
+    ) -> Result<HistoryEntry> {
+        let conn = self.get_connection()?;
+        let updated_at = feedback.map(|_| Utc::now().timestamp());
+        let entry = Self::set_feedback_with_conn(&conn, id, feedback, updated_at)?;
+
+        debug!("Updated cleanup feedback for history entry {}", id);
 
         if let Err(e) = (HistoryUpdatePayload::Updated {
             entry: entry.clone(),
@@ -388,6 +526,118 @@ impl HistoryManager {
         }
 
         Ok(entry)
+    }
+
+    fn set_feedback_with_conn(
+        conn: &Connection,
+        id: i64,
+        feedback: Option<CleanupFeedback>,
+        updated_at: Option<i64>,
+    ) -> Result<HistoryEntry> {
+        let sql = format!(
+            "UPDATE transcription_history
+             SET feedback = ?1, feedback_updated_at = ?2
+             WHERE id = ?3 AND {SUCCESSFUL_CLEANUP_PREDICATE}"
+        );
+        let updated = conn.execute(&sql, params![feedback, updated_at, id])?;
+
+        if updated == 0 {
+            let exists: bool = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM transcription_history WHERE id = ?1)",
+                [id],
+                |row| row.get(0),
+            )?;
+            return if exists {
+                Err(anyhow!(
+                    "History entry {} does not contain a successful cleanup result",
+                    id
+                ))
+            } else {
+                Err(anyhow!("History entry {} not found", id))
+            };
+        }
+
+        Self::get_entry_by_id_with_conn(conn, id)?
+            .ok_or_else(|| anyhow!("History entry {} not found after feedback update", id))
+    }
+
+    pub fn get_feedback_summary(&self) -> Result<CleanupFeedbackSummary> {
+        let conn = self.get_connection()?;
+        Self::get_feedback_summary_with_conn(&conn)
+    }
+
+    fn get_feedback_summary_with_conn(conn: &Connection) -> Result<CleanupFeedbackSummary> {
+        let sql = format!(
+            "SELECT
+                COALESCE(SUM(CASE WHEN feedback = 'up' THEN 1 ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN feedback = 'down' THEN 1 ELSE 0 END), 0),
+                COUNT(*)
+             FROM transcription_history
+             WHERE feedback IS NOT NULL
+               AND feedback_updated_at IS NOT NULL
+               AND {SUCCESSFUL_CLEANUP_PREDICATE}"
+        );
+        let (up, down, total): (i64, i64, i64) =
+            conn.query_row(&sql, [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+
+        Ok(CleanupFeedbackSummary {
+            up: usize::try_from(up)?,
+            down: usize::try_from(down)?,
+            total: usize::try_from(total)?,
+        })
+    }
+
+    pub fn get_feedback_dataset_records(
+        &self,
+        locution_version: &str,
+    ) -> Result<Vec<FeedbackDatasetRecord>> {
+        let conn = self.get_connection()?;
+        Self::get_feedback_dataset_records_with_conn(&conn, locution_version)
+    }
+
+    fn get_feedback_dataset_records_with_conn(
+        conn: &Connection,
+        locution_version: &str,
+    ) -> Result<Vec<FeedbackDatasetRecord>> {
+        let sql = format!(
+            "SELECT
+                timestamp,
+                feedback_updated_at,
+                feedback,
+                transcription_text,
+                post_processed_text,
+                cleanup_mode_id,
+                cleanup_mode_name,
+                cleanup_model,
+                cleanup_tier,
+                post_process_prompt
+             FROM transcription_history
+             WHERE feedback IS NOT NULL
+               AND feedback_updated_at IS NOT NULL
+               AND {SUCCESSFUL_CLEANUP_PREDICATE}
+             ORDER BY timestamp ASC, id ASC"
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let records = stmt
+            .query_map([], |row| {
+                Ok(FeedbackDatasetRecord {
+                    schema_version: 1,
+                    locution_version: locution_version.to_string(),
+                    entry_timestamp: row.get("timestamp")?,
+                    feedback_updated_at: row.get("feedback_updated_at")?,
+                    feedback: row.get("feedback")?,
+                    transcription_text: row.get("transcription_text")?,
+                    cleaned_text: row.get("post_processed_text")?,
+                    cleanup_mode_id: row.get("cleanup_mode_id")?,
+                    cleanup_mode_name: row.get("cleanup_mode_name")?,
+                    cleanup_model: row.get("cleanup_model")?,
+                    cleanup_tier: row.get("cleanup_tier")?,
+                    prompt_template: row.get("post_process_prompt")?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(records)
     }
 
     pub fn cleanup_old_entries(&self) -> Result<()> {
@@ -522,7 +772,7 @@ impl HistoryManager {
             (Some(cursor_id), Some(lim)) => {
                 let fetch_count = (lim + 1) as i64;
                 let mut stmt = conn.prepare(
-                    "SELECT id, file_name, timestamp, saved, title, transcription_text, post_processed_text, post_process_prompt, post_process_requested, cleanup_mode_id, cleanup_mode_name, cleanup_model, cleanup_tier, cleanup_error
+                    "SELECT id, file_name, timestamp, saved, title, transcription_text, post_processed_text, post_process_prompt, post_process_requested, cleanup_mode_id, cleanup_mode_name, cleanup_model, cleanup_tier, cleanup_error, feedback, feedback_updated_at
                      FROM transcription_history
                      WHERE id < ?1
                      ORDER BY id DESC
@@ -536,7 +786,7 @@ impl HistoryManager {
             (None, Some(lim)) => {
                 let fetch_count = (lim + 1) as i64;
                 let mut stmt = conn.prepare(
-                    "SELECT id, file_name, timestamp, saved, title, transcription_text, post_processed_text, post_process_prompt, post_process_requested, cleanup_mode_id, cleanup_mode_name, cleanup_model, cleanup_tier, cleanup_error
+                    "SELECT id, file_name, timestamp, saved, title, transcription_text, post_processed_text, post_process_prompt, post_process_requested, cleanup_mode_id, cleanup_mode_name, cleanup_model, cleanup_tier, cleanup_error, feedback, feedback_updated_at
                      FROM transcription_history
                      ORDER BY id DESC
                      LIMIT ?1",
@@ -548,7 +798,7 @@ impl HistoryManager {
             }
             (_, None) => {
                 let mut stmt = conn.prepare(
-                    "SELECT id, file_name, timestamp, saved, title, transcription_text, post_processed_text, post_process_prompt, post_process_requested, cleanup_mode_id, cleanup_mode_name, cleanup_model, cleanup_tier, cleanup_error
+                    "SELECT id, file_name, timestamp, saved, title, transcription_text, post_processed_text, post_process_prompt, post_process_requested, cleanup_mode_id, cleanup_mode_name, cleanup_model, cleanup_tier, cleanup_error, feedback, feedback_updated_at
                      FROM transcription_history
                      ORDER BY id DESC",
                 )?;
@@ -584,7 +834,9 @@ impl HistoryManager {
                 cleanup_mode_name,
                 cleanup_model,
                 cleanup_tier,
-                cleanup_error
+                cleanup_error,
+                feedback,
+                feedback_updated_at
              FROM transcription_history
              ORDER BY timestamp DESC
              LIMIT 1",
@@ -616,7 +868,9 @@ impl HistoryManager {
                 cleanup_mode_name,
                 cleanup_model,
                 cleanup_tier,
-                cleanup_error
+                cleanup_error,
+                feedback,
+                feedback_updated_at
              FROM transcription_history
              WHERE transcription_text != ''
              ORDER BY timestamp DESC
@@ -660,29 +914,7 @@ impl HistoryManager {
 
     pub async fn get_entry_by_id(&self, id: i64) -> Result<Option<HistoryEntry>> {
         let conn = self.get_connection()?;
-        let mut stmt = conn.prepare(
-            "SELECT
-                id,
-                file_name,
-                timestamp,
-                saved,
-                title,
-                transcription_text,
-                post_processed_text,
-                post_process_prompt,
-                post_process_requested,
-                cleanup_mode_id,
-                cleanup_mode_name,
-                cleanup_model,
-                cleanup_tier,
-                cleanup_error
-             FROM transcription_history
-             WHERE id = ?1",
-        )?;
-
-        let entry = stmt.query_row([id], Self::map_history_entry).optional()?;
-
-        Ok(entry)
+        Self::get_entry_by_id_with_conn(&conn, id)
     }
 
     pub async fn delete_entry(&self, id: i64) -> Result<()> {
@@ -770,6 +1002,39 @@ mod tests {
         .expect("insert history entry");
     }
 
+    fn insert_cleanup_entry(conn: &Connection, timestamp: i64) -> i64 {
+        conn.execute(
+            "INSERT INTO transcription_history (
+                file_name,
+                timestamp,
+                saved,
+                title,
+                transcription_text,
+                post_processed_text,
+                post_process_prompt,
+                post_process_requested,
+                cleanup_mode_id,
+                cleanup_mode_name,
+                cleanup_model,
+                cleanup_tier
+            ) VALUES (?1, ?2, 0, ?3, ?4, ?5, ?6, 1, ?7, ?8, ?9, ?10)",
+            params![
+                format!("handy-{}.wav", timestamp),
+                timestamp,
+                format!("Recording {}", timestamp),
+                "raw transcript",
+                "cleaned transcript",
+                "Clean this: ${output}",
+                "clean_up",
+                "Clean up",
+                "test-model",
+                "long",
+            ],
+        )
+        .expect("insert successful cleanup entry");
+        conn.last_insert_rowid()
+    }
+
     #[test]
     fn get_latest_entry_returns_none_when_empty() {
         let conn = setup_conn();
@@ -790,6 +1055,8 @@ mod tests {
         assert_eq!(entry.timestamp, 200);
         assert_eq!(entry.transcription_text, "second");
         assert_eq!(entry.post_processed_text.as_deref(), Some("processed"));
+        assert_eq!(entry.feedback, None);
+        assert_eq!(entry.feedback_updated_at, None);
     }
 
     #[test]
@@ -804,5 +1071,218 @@ mod tests {
 
         assert_eq!(entry.timestamp, 100);
         assert_eq!(entry.transcription_text, "completed");
+    }
+
+    #[test]
+    fn set_feedback_persists_switches_and_clears() {
+        let conn = setup_conn();
+        let id = insert_cleanup_entry(&conn, 100);
+
+        let up =
+            HistoryManager::set_feedback_with_conn(&conn, id, Some(CleanupFeedback::Up), Some(110))
+                .expect("set thumbs up");
+        assert_eq!(up.feedback, Some(CleanupFeedback::Up));
+        assert_eq!(up.feedback_updated_at, Some(110));
+
+        let down = HistoryManager::set_feedback_with_conn(
+            &conn,
+            id,
+            Some(CleanupFeedback::Down),
+            Some(120),
+        )
+        .expect("switch to thumbs down");
+        assert_eq!(down.feedback, Some(CleanupFeedback::Down));
+        assert_eq!(down.feedback_updated_at, Some(120));
+
+        let cleared =
+            HistoryManager::set_feedback_with_conn(&conn, id, None, None).expect("clear feedback");
+        assert_eq!(cleared.feedback, None);
+        assert_eq!(cleared.feedback_updated_at, None);
+    }
+
+    #[test]
+    fn set_feedback_rejects_ineligible_and_missing_entries() {
+        let conn = setup_conn();
+        insert_entry(&conn, 100, "raw only", None);
+
+        let ineligible =
+            HistoryManager::set_feedback_with_conn(&conn, 1, Some(CleanupFeedback::Up), Some(110))
+                .expect_err("raw entry must not be rateable");
+        assert!(ineligible
+            .to_string()
+            .contains("does not contain a successful cleanup result"));
+
+        let missing = HistoryManager::set_feedback_with_conn(
+            &conn,
+            999,
+            Some(CleanupFeedback::Down),
+            Some(110),
+        )
+        .expect_err("missing entry must fail");
+        assert!(missing.to_string().contains("not found"));
+    }
+
+    #[test]
+    fn feedback_column_rejects_unknown_values() {
+        let conn = setup_conn();
+        let id = insert_cleanup_entry(&conn, 100);
+
+        let result = conn.execute(
+            "UPDATE transcription_history SET feedback = 'maybe' WHERE id = ?1",
+            [id],
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn retranscription_clears_feedback_for_replaced_result() {
+        let conn = setup_conn();
+        let id = insert_cleanup_entry(&conn, 100);
+        HistoryManager::set_feedback_with_conn(&conn, id, Some(CleanupFeedback::Up), Some(110))
+            .expect("set feedback");
+
+        let updated = HistoryManager::update_transcription_with_conn(
+            &conn,
+            id,
+            "new raw transcript".to_string(),
+            Some("new cleaned transcript".to_string()),
+            Some("Updated prompt: ${output}".to_string()),
+            CleanupRecord {
+                mode_id: Some("clean_up".to_string()),
+                mode_name: Some("Clean up".to_string()),
+                model: Some("test-model".to_string()),
+                tier: Some("long".to_string()),
+                error: None,
+            },
+        )
+        .expect("replace transcription result");
+
+        assert_eq!(updated.transcription_text, "new raw transcript");
+        assert_eq!(updated.feedback, None);
+        assert_eq!(updated.feedback_updated_at, None);
+    }
+
+    #[test]
+    fn feedback_summary_and_dataset_include_only_eligible_rated_entries() {
+        let conn = setup_conn();
+        let later_id = insert_cleanup_entry(&conn, 200);
+        let earlier_id = insert_cleanup_entry(&conn, 100);
+        insert_entry(&conn, 50, "raw only", None);
+        let raw_id = conn.last_insert_rowid();
+        conn.execute(
+            "UPDATE transcription_history
+             SET feedback = 'up', feedback_updated_at = 60
+             WHERE id = ?1",
+            [raw_id],
+        )
+        .expect("seed ineligible feedback");
+
+        HistoryManager::set_feedback_with_conn(
+            &conn,
+            later_id,
+            Some(CleanupFeedback::Down),
+            Some(220),
+        )
+        .expect("rate later cleanup");
+        HistoryManager::set_feedback_with_conn(
+            &conn,
+            earlier_id,
+            Some(CleanupFeedback::Up),
+            Some(120),
+        )
+        .expect("rate earlier cleanup");
+
+        let summary =
+            HistoryManager::get_feedback_summary_with_conn(&conn).expect("summarize feedback");
+        assert_eq!(
+            summary,
+            CleanupFeedbackSummary {
+                up: 1,
+                down: 1,
+                total: 2,
+            }
+        );
+
+        let records = HistoryManager::get_feedback_dataset_records_with_conn(&conn, "0.1.50")
+            .expect("load feedback dataset");
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].entry_timestamp, 100);
+        assert_eq!(records[0].feedback, CleanupFeedback::Up);
+        assert_eq!(records[0].feedback_updated_at, 120);
+        assert_eq!(records[0].transcription_text, "raw transcript");
+        assert_eq!(records[0].cleaned_text, "cleaned transcript");
+        assert_eq!(records[0].cleanup_mode_id, "clean_up");
+        assert_eq!(records[0].cleanup_mode_name, "Clean up");
+        assert_eq!(records[0].cleanup_model, "test-model");
+        assert_eq!(records[0].cleanup_tier.as_deref(), Some("long"));
+        assert_eq!(
+            records[0].prompt_template.as_deref(),
+            Some("Clean this: ${output}")
+        );
+        assert_eq!(records[1].entry_timestamp, 200);
+        assert_eq!(records[1].feedback, CleanupFeedback::Down);
+        assert!(records.iter().all(|record| record.schema_version == 1));
+        assert!(records
+            .iter()
+            .all(|record| record.locution_version == "0.1.50"));
+
+        let serialized = serde_json::to_value(&records[0]).expect("serialize feedback record");
+        assert_eq!(serialized["cleanup_tier"], "long");
+        assert_eq!(serialized["prompt_template"], "Clean this: ${output}");
+    }
+
+    #[test]
+    fn empty_feedback_summary_returns_zero_counts() {
+        let conn = setup_conn();
+
+        let summary = HistoryManager::get_feedback_summary_with_conn(&conn)
+            .expect("summarize empty feedback");
+
+        assert_eq!(
+            summary,
+            CleanupFeedbackSummary {
+                up: 0,
+                down: 0,
+                total: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn feedback_dataset_orders_equal_timestamps_by_entry_id() {
+        let conn = setup_conn();
+        let first_id = insert_cleanup_entry(&conn, 100);
+        let second_id = insert_cleanup_entry(&conn, 100);
+        conn.execute(
+            "UPDATE transcription_history SET transcription_text = ?1 WHERE id = ?2",
+            params!["first", first_id],
+        )
+        .expect("label first entry");
+        conn.execute(
+            "UPDATE transcription_history SET transcription_text = ?1 WHERE id = ?2",
+            params!["second", second_id],
+        )
+        .expect("label second entry");
+        HistoryManager::set_feedback_with_conn(
+            &conn,
+            first_id,
+            Some(CleanupFeedback::Up),
+            Some(110),
+        )
+        .expect("rate first entry");
+        HistoryManager::set_feedback_with_conn(
+            &conn,
+            second_id,
+            Some(CleanupFeedback::Down),
+            Some(120),
+        )
+        .expect("rate second entry");
+
+        let records = HistoryManager::get_feedback_dataset_records_with_conn(&conn, "test")
+            .expect("load ordered dataset");
+
+        assert_eq!(records[0].transcription_text, "first");
+        assert_eq!(records[1].transcription_text, "second");
     }
 }
