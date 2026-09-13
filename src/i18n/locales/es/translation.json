@@ -608,7 +608,20 @@
       "transcriptionFailed": "La transcripción falló. Puedes re-transcribir usando el ícono de reintentar.",
       "rawText": "Sin procesar",
       "cleanedText": "Limpiado",
-      "cleanupFailed": "Error de limpieza"
+      "cleanupFailed": "Error de limpieza",
+      "thumbsUp": "Marcar la limpieza como útil",
+      "thumbsDown": "Marcar la limpieza como poco útil",
+      "feedbackError": "No se pudo actualizar la valoración. Inténtalo de nuevo.",
+      "feedbackExport": {
+        "button": "Exportar valoraciones",
+        "exporting": "Exportando...",
+        "noData": "No hay valoraciones de limpieza para exportar.",
+        "confirmationTitle": "¿Exportar valoraciones de limpieza?",
+        "confirmation": "¿Exportar {{up}} valoraciones positivas y {{down}} negativas? El archivo local incluirá el texto dictado y limpiado completo, que puede contener información confidencial.",
+        "fileType": "Líneas JSON",
+        "success": "Se exportaron {{count}} valoraciones.",
+        "failure": "No se pudieron exportar las valoraciones de limpieza. Inténtalo de nuevo."
+      }
     },
     "debug": {
       "title": "Depuración",

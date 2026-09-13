@@ -608,7 +608,20 @@
       "transcriptionFailed": "La transcription a échoué. Vous pouvez re-transcrire en utilisant l'icône de réessai.",
       "rawText": "Brut",
       "cleanedText": "Nettoyé",
-      "cleanupFailed": "Échec du nettoyage"
+      "cleanupFailed": "Échec du nettoyage",
+      "thumbsUp": "Marquer le nettoyage comme utile",
+      "thumbsDown": "Marquer le nettoyage comme peu utile",
+      "feedbackError": "Impossible de mettre à jour l’évaluation. Veuillez réessayer.",
+      "feedbackExport": {
+        "button": "Exporter les évaluations",
+        "exporting": "Exportation...",
+        "noData": "Aucune évaluation de nettoyage à exporter.",
+        "confirmationTitle": "Exporter les évaluations de nettoyage ?",
+        "confirmation": "Exporter {{up}} évaluations positives et {{down}} négatives ? Le fichier local contiendra l’intégralité du texte dicté et nettoyé, qui peut inclure des informations sensibles.",
+        "fileType": "Lignes JSON",
+        "success": "{{count}} évaluations exportées.",
+        "failure": "Impossible d’exporter les évaluations de nettoyage. Veuillez réessayer."
+      }
     },
     "debug": {
       "title": "Débogage",

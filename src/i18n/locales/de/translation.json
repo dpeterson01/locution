@@ -608,7 +608,20 @@
       "transcriptionFailed": "Transkription fehlgeschlagen. Du kannst über das Wiederholen-Symbol erneut transkribieren.",
       "rawText": "Roh",
       "cleanedText": "Bereinigt",
-      "cleanupFailed": "Bereinigung fehlgeschlagen"
+      "cleanupFailed": "Bereinigung fehlgeschlagen",
+      "thumbsUp": "Bereinigung als hilfreich markieren",
+      "thumbsDown": "Bereinigung als nicht hilfreich markieren",
+      "feedbackError": "Feedback konnte nicht aktualisiert werden. Bitte versuche es erneut.",
+      "feedbackExport": {
+        "button": "Feedback exportieren",
+        "exporting": "Exportiere...",
+        "noData": "Es gibt kein Bereinigungsfeedback zum Exportieren.",
+        "confirmationTitle": "Bereinigungsfeedback exportieren?",
+        "confirmation": "{{up}} positive und {{down}} negative Bewertungen exportieren? Die lokale Datei enthält den vollständigen diktierten und bereinigten Text, der vertrauliche Informationen enthalten kann.",
+        "fileType": "JSON-Zeilen",
+        "success": "{{count}} Feedback-Einträge exportiert.",
+        "failure": "Bereinigungsfeedback konnte nicht exportiert werden. Bitte versuche es erneut."
+      }
     },
     "debug": {
       "title": "Debug",

@@ -608,7 +608,20 @@
       "transcriptionFailed": "Transcription failed. You can re-transcribe using the retry icon.",
       "rawText": "Raw",
       "cleanedText": "Cleaned",
-      "cleanupFailed": "Cleanup failed"
+      "cleanupFailed": "Cleanup failed",
+      "thumbsUp": "Mark cleanup as helpful",
+      "thumbsDown": "Mark cleanup as unhelpful",
+      "feedbackError": "Failed to update feedback. Please try again.",
+      "feedbackExport": {
+        "button": "Export feedback",
+        "exporting": "Exporting...",
+        "noData": "There is no cleanup feedback to export.",
+        "confirmationTitle": "Export cleanup feedback?",
+        "confirmation": "Export {{up}} thumbs-up and {{down}} thumbs-down ratings? The local file will include the full dictated and cleaned text, which may contain sensitive information.",
+        "fileType": "JSON Lines",
+        "success": "Exported {{count}} feedback entries.",
+        "failure": "Failed to export cleanup feedback. Please try again."
+      }
     },
     "debug": {
       "title": "Debug",
