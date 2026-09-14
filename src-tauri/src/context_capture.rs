@@ -39,19 +39,25 @@ impl ContextSnapshot {
 
 /// Character-count caps keep the local model's context sane and bound what a
 /// stray mega-clipboard can inject.
+#[cfg(target_os = "macos")]
 const MAX_SELECTION_CHARS: usize = 2000;
+#[cfg(target_os = "macos")]
 const MAX_CLIPBOARD_CHARS: usize = 1000;
+#[cfg(target_os = "macos")]
 const MAX_APP_META_CHARS: usize = 200;
 /// Field text above this length is treated as a document, not a compose box,
 /// and dropped entirely (see `sanitize_field_text`).
+#[cfg(target_os = "macos")]
 const MAX_FIELD_CHARS: usize = 2000;
 /// Recipient strings are short (a name or a few names); cap well below the
 /// content channels.
+#[cfg(target_os = "macos")]
 const MAX_RECIPIENTS_CHARS: usize = 300;
 
 /// Trim, drop empties, neutralize a literal `${output}` (the legacy prompt
 /// path replaces every occurrence, so captured content must never smuggle the
 /// placeholder in), and truncate on a char boundary.
+#[cfg(target_os = "macos")]
 fn sanitize(raw: String, max_chars: usize) -> Option<String> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
@@ -65,6 +71,7 @@ fn sanitize(raw: String, max_chars: usize) -> Option<String> {
 /// the focused field holds more than `MAX_FIELD_CHARS`, it is an editor or a
 /// long document, so DROP it rather than inject a truncated slab that would
 /// mislead cleanup. Otherwise trim and neutralize `${output}` like `sanitize`.
+#[cfg(target_os = "macos")]
 fn sanitize_field_text(raw: String) -> Option<String> {
     let trimmed = raw.trim();
     if trimmed.is_empty() || trimmed.chars().count() > MAX_FIELD_CHARS {

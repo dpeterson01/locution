@@ -29,6 +29,7 @@ fn transient_override() -> Option<String> {
 }
 
 /// Clears the transient manual override so the per-app rule resumes ownership.
+#[cfg(target_os = "macos")]
 pub fn clear_transient_override() {
     *TRANSIENT_MODE_OVERRIDE
         .lock()
@@ -106,6 +107,7 @@ fn apply_base_for_bundle(app: &AppHandle, bundle_id: &str) {
 /// thread with the newly-frontmost app's bundle id. Ignores activations of our
 /// own windows (so the mode keeps reflecting the last external app), clears any
 /// transient manual override, then applies the base per-app rule.
+#[cfg(target_os = "macos")]
 pub fn on_app_switched(app: &AppHandle, bundle_id: &str) {
     if bundle_id == app.config().identifier {
         return;
