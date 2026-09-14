@@ -74,7 +74,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU5NkI0QjExMDE2MTNBNjEKUldSaE9tRUJFVXRyNmFjcGEvVnlrRiswNWZraU5nejhqSVVhZlZSRmN5Mng4ODlmZDNWczgybnEK",
+      "pubkey": "ZFc1MGNuVnpkR1ZrSUdOdmJXMWxiblE2SUcxcGJtbHphV2R1SUhCMVlteHBZeUJyWlhrNklFVTVOa0kwUWpFeE1ERTJNVE5CTmpFS1VsZFNhRTl0UlVKRlZYUnlObUZqY0dFdlZubHJSaXN3TldacmFVNW5lamhxU1ZWaFpsWlNSbU41TW5nNE9EbG1aRE5XY3pneWJuRUs=",
       "endpoints": [
         "https://github.com/dpeterson01/locution/releases/latest/download/latest.json"
       ]
