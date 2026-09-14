@@ -28,6 +28,10 @@ pub struct CliArgs {
     #[arg(long)]
     pub debug: bool,
 
+    /// Exit successfully after native core setup completes
+    #[arg(long, hide = true)]
+    pub native_smoke_test: bool,
+
     /// Transcribe this WAV (16 kHz mono) headlessly and exit. Runs the same
     /// batch transcription path as the app — no mic, no VAD, no download
     /// (the model must already be installed).
@@ -60,4 +64,16 @@ pub struct CliArgs {
     /// Emit --transcribe-file results as JSON.
     #[arg(long)]
     pub json: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_native_smoke_test_flag() {
+        let args = CliArgs::try_parse_from(["locution", "--native-smoke-test"]).unwrap();
+
+        assert!(args.native_smoke_test);
+    }
 }

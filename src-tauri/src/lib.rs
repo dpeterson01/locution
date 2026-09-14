@@ -211,6 +211,10 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     #[cfg(target_os = "macos")]
     app_handle.manage(crate::afm_setup::AfmManager::default());
 
+    if app_handle.state::<CliArgs>().native_smoke_test {
+        return;
+    }
+
     // Note: Shortcuts are NOT initialized here.
     // The frontend is responsible for calling the `initialize_shortcuts` command
     // after permissions are confirmed (on macOS) or after onboarding completes.
@@ -947,6 +951,12 @@ pub fn run(cli_args: CliArgs) {
             app.manage(TranscriptionCoordinator::new(app_handle.clone()));
 
             initialize_core_logic(&app_handle);
+
+            if cli_args.native_smoke_test {
+                eprintln!("[native-smoke] startup complete");
+                app_handle.exit(0);
+                return Ok(());
+            }
 
             // First-run nudge to install into /Applications (macOS only; no-op
             // elsewhere). Runs on its own thread and only acts when launched
