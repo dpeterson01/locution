@@ -14,9 +14,17 @@ Locution is a fully-local macOS dictation app: global hotkey → mic capture →
 1. **No push, no PR without explicit approval.** Prepare branch, commit, title, description — stop and wait for go-ahead. "Work autonomously" does not authorize pushing.
 2. **No release without explicit approval.** No version-specific hold is active now — the v0.1.2/v0.1.3 drafts were superseded and never published (v0.1.4 onward shipped). Never dispatch `release.yml` without Derek naming the version (see rule 6).
 3. **Bindings regen contract.** After any Rust `#[tauri::command]` add or remove, run `cd src-tauri && cargo run` to regenerate `src/bindings.ts`. Never hand-edit `bindings.ts`. Verify the diff before claiming done.
-4. **Commit per logical phase.** Gate every commit on `bunx tsc --noEmit` + `cargo check` (or `cargo clippy`). Show the output — don't just assert it passed.
+4. **Commit per logical phase.** Run the applicable validation tier below and report the observed result before committing.
 5. **DB migrations are append-only.** Never edit existing `MIGRATIONS` entries. Add a new entry for each schema change.
 6. **Release workflow requires explicit approval every time.** `release.yml` is `workflow_dispatch`-only (not triggered by tags). Treat it as a destructive action.
+
+## Validation by scope
+
+- **Frontend changes:** run `bun run check:frontend`. Add the relevant Playwright test while iterating on behavior.
+- **Rust changes:** run `bun run check:rust` and the narrowest relevant Rust test. Strict Clippy treats warnings as errors.
+- **Nix or packaging changes:** run `bun run check:nix`. It verifies `.nix/bun.nix` synchronization and evaluates the Linux package derivation.
+- **PR readiness:** run `bun run check:pr`. It includes fast frontend and Rust checks, Rust tests, and Playwright.
+- **Native acceptance:** run `bun run check:acceptance` only when startup, packaging, migrations, bundled resources, or Tauri configuration changed. It adds the packaged native smoke test to the PR tier.
 
 ## Memory startup
 
