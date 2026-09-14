@@ -120,7 +120,9 @@
               # extraRegistries also emits a named crates.io source, which Cargo treats
               # as a duplicate of the standard crates-io source during the offline build.
               sed -i '/^[[:space:]]*\[source\."https:\/\/github.com\/rust-lang\/crates.io-index"\][[:space:]]*$/,/^[[:space:]]*$/d' \
-                .cargo/config.toml
+                .cargo/config.toml "$cargoDepsCopy/.cargo/config.toml"
+              ! grep -qF '[source."https://github.com/rust-lang/crates.io-index"]' \
+                .cargo/config.toml "$cargoDepsCopy/.cargo/config.toml"
 
               # Point libappindicator-sys to the Nix store path
               substituteInPlace \
