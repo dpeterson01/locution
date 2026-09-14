@@ -84,6 +84,16 @@
               "${pkgs.alsa-plugins}/lib/alsa-lib"
             ];
           };
+          cargoDeps = (pkgs.rustPlatform.importCargoLock {
+            lockFile = ./src-tauri/Cargo.lock;
+            allowBuiltinFetchGit = true;
+            extraRegistries."https://github.com/rust-lang/crates.io-index" = "https://static.crates.io/crates";
+          }).overrideAttrs (oldAttrs: {
+            buildCommand = oldAttrs.buildCommand + ''
+              sed -i '/^[[:space:]]*\[source\."https:\/\/github.com\/rust-lang\/crates.io-index"\][[:space:]]*$/,/^[[:space:]]*$/d' \
+                "$out/.cargo/config.toml"
+            '';
+          });
         in
         {
           handy = pkgs.rustPlatform.buildRustPackage {
@@ -95,16 +105,9 @@
             buildAndTestSubdir = "src-tauri";
             tauriBundleType = "deb";
 
-            cargoLock = {
-              lockFile = ./src-tauri/Cargo.lock;
-              # Automatically fetch git dependencies using builtins.fetchGit.
-              # This eliminates the need for manual outputHashes that had to be
-              # updated every time a git dependency changed in Cargo.lock.
-              # Safe for standalone flakes (not allowed in nixpkgs, it is needed something like crate2nix).
-              allowBuiltinFetchGit = true;
-              # Avoid crates.io's rate-limited API endpoint, which intermittently returns 403s.
-              extraRegistries."https://github.com/rust-lang/crates.io-index" = "https://static.crates.io/crates";
-            };
+            # Avoid crates.io's rate-limited API while keeping Cargo's canonical
+            # crates-io source definition in the generated vendor configuration.
+            inherit cargoDeps;
 
             postPatch = ''
               ${pkgs.jq}/bin/jq '.bundle.createUpdaterArtifacts = false' \
@@ -116,13 +119,6 @@
               ${pkgs.jq}/bin/jq 'del(.scripts.postinstall)' \
                 package.json > $TMPDIR/package.json
               cp $TMPDIR/package.json package.json
-
-              # extraRegistries also emits a named crates.io source, which Cargo treats
-              # as a duplicate of the standard crates-io source during the offline build.
-              sed -i '/^[[:space:]]*\[source\."https:\/\/github.com\/rust-lang\/crates.io-index"\][[:space:]]*$/,/^[[:space:]]*$/d' \
-                .cargo/config.toml "$cargoDepsCopy/.cargo/config.toml"
-              ! grep -qF '[source."https://github.com/rust-lang/crates.io-index"]' \
-                .cargo/config.toml "$cargoDepsCopy/.cargo/config.toml"
 
               # Point libappindicator-sys to the Nix store path
               substituteInPlace \
