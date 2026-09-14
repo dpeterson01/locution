@@ -515,7 +515,7 @@ jobs:
           releaseName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
           releaseId: ${{ inputs.release-id }}
           assetNamePattern: ${{ steps.patch-release-name.outputs.platform }}
-          args: ${{ inputs.build-args }}
+          args: "${{ inputs.build-args }} --config src-tauri/tauri.ci.conf.json"
 
       - name: Build with Tauri (signed updater)
         if: inputs.sign-updater
