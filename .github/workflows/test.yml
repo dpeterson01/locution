@@ -5,9 +5,15 @@ on:
     branches: [main]
     paths:
       - "src-tauri/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/test.yml"
   pull_request:
     paths:
       - "src-tauri/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/test.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -18,6 +24,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install system dependencies
         run: |
@@ -32,6 +42,8 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
+      - name: Run Rust checks
+        run: bun run check:rust
+
       - name: Run Rust tests
-        working-directory: src-tauri
-        run: cargo test
+        run: bun run test:rust
