@@ -55,26 +55,30 @@ jobs:
       - name: Run Nix checks
         run: bun run check:nix
 
-      # Detect whether nix packaging files changed — if only source code
-      # changed, the quick checks above are sufficient.
-      # Skipped on workflow_dispatch (no base ref) — full build runs instead.
+      # Detect whether Nix packaging files changed. Source-only changes stop
+      # after the quick checks, while manual runs always perform a full build.
       - name: Check if nix files changed
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
         id: nix-files
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files \
-            --paginate --jq '.[].filename' | \
-            grep -qE '^(flake\.(nix|lock)|\.nix/|bun\.lock|src-tauri/(Cargo\.(toml|lock)|tauri\.conf\.json|build\.rs))'; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            files=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files \
+              --paginate --jq '.[].filename')
+          else
+            files=$(gh api repos/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }} \
+              --jq '.files[].filename')
+          fi
+
+          if grep -qE '^(flake\.(nix|lock)|\.nix/|bun\.lock|src-tauri/(Cargo\.(toml|lock)|tauri\.conf\.json|build\.rs))' <<< "$files"; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
       # Full build — catches runtime build errors (broken dependencies,
       # sandbox issues, compilation failures) that flake eval alone misses.
-      # On PRs: only runs when nix packaging files change (~25 min with cold cache).
-      # On push to main and workflow_dispatch: always runs so every commit on
-      # main has a verified nix build before release.
+      # On PRs and pushes: only runs when Nix packaging files change.
+      # On workflow_dispatch: always runs for explicit full-build verification.
       - name: Build handy
         if: steps.nix-files.outputs.changed == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         run: nix build .#handy -L --show-trace
