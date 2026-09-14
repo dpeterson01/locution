@@ -1,19 +1,59 @@
 name: "Main Branch Build"
 
-# Runs the full cross-platform build on every push to main so breakage is
-# caught before a manual release is triggered. Artifacts are kept for 30 days
-# so any commit on main has a downloadable, testable build.
+# Routine pushes build representative macOS and Windows packages. Weekly and
+# manual runs cover every release platform without putting that cost on each
+# commit to main.
 
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "public/**"
+      - "scripts/**"
+      - "index.html"
+      - "package.json"
+      - "bun.lock"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - ".github/workflows/build.yml"
+      - ".github/workflows/main-build.yml"
+  schedule:
+    - cron: "0 10 * * 1"
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  routine-build:
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-26"
+            args: "--target aarch64-apple-darwin"
+            target: "aarch64-apple-darwin"
+          - platform: "windows-latest"
+            args: ""
+            target: "x86_64-pc-windows-msvc"
+
+    uses: ./.github/workflows/build.yml
+    with:
+      platform: ${{ matrix.platform }}
+      target: ${{ matrix.target }}
+      build-args: ${{ matrix.args }}
+      upload-artifacts: true
+      sign-binaries: false
+    secrets: inherit
+
+  full-build:
+    if: github.event_name != 'push'
     permissions:
       contents: write
     strategy:
