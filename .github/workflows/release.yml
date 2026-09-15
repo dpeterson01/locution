@@ -3,9 +3,55 @@ name: "Release"
 on: workflow_dispatch
 
 jobs:
+  validate-updater-signing:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install minisign
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y minisign
+
+      - name: Verify updater signing key pair
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$TAURI_SIGNING_PRIVATE_KEY" || -z "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" ]]; then
+            echo "Updater signing secrets are not configured." >&2
+            exit 1
+          fi
+
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+
+          printf 'Locution updater signing preflight\n' > "$temp_dir/payload"
+          jq -er '.plugins.updater.pubkey | select(type == "string" and length > 0)' \
+            src-tauri/tauri.conf.json | base64 --decode > "$temp_dir/updater.pub"
+
+          bun tauri signer sign "$temp_dir/payload" > /dev/null
+          base64 --decode < "$temp_dir/payload.sig" > "$temp_dir/payload.minisig"
+          minisign -V -m "$temp_dir/payload" -p "$temp_dir/updater.pub" \
+            -x "$temp_dir/payload.minisig"
+
   create-release:
     permissions:
       contents: write
+    needs: validate-updater-signing
     runs-on: ubuntu-latest
     outputs:
       release-id: ${{ steps.create-release.outputs.result }}
@@ -27,11 +73,40 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
+            const tag = `v${{ steps.get-version.outputs.version }}`
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            })
+            const existing = releases.find((release) => release.draft && release.tag_name === tag)
+
+            if (existing) {
+              if (existing.assets.length > 0) {
+                core.setFailed(`Draft release ${tag} already has assets; refusing to mix release runs.`)
+                return
+              }
+
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: existing.id,
+                tag_name: tag,
+                target_commitish: context.sha,
+                name: tag,
+                draft: true,
+                prerelease: false
+              })
+              core.info(`Reusing empty draft release ${tag} (${existing.id}).`)
+              return existing.id
+            }
+
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${{ steps.get-version.outputs.version }}`,
-              name: `v${{ steps.get-version.outputs.version }}`,
+              tag_name: tag,
+              target_commitish: context.sha,
+              name: tag,
               draft: true,
               prerelease: false,
               generate_release_notes: true
