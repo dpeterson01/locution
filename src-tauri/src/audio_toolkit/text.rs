@@ -280,7 +280,7 @@ fn get_filler_words_for_language(lang: &str) -> &'static [&'static str] {
     match base_lang {
         "en" => &[
             "uh", "um", "uhm", "umm", "uhh", "uhhh", "ah", "hmm", "hm", "mmm", "mm", "mh", "eh",
-            "ehh", "ha",
+            "ehh",
         ],
         "es" => &["ehm", "mmm", "hmm", "hm"],
         "pt" => &["ahm", "hmm", "mmm", "hm"],
