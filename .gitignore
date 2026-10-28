@@ -41,9 +41,6 @@ blob-report/
 .direnv
 .envrc
 
-# Nix build output
-result
-
 # Local development docs (kept out of the public repo)
 /CLAUDE.md
 /docs/LOCUTION_BUILD_PLAN.md
