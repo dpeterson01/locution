@@ -2,6 +2,7 @@ use crate::input;
 use crate::settings;
 use crate::settings::{OverlayPosition, OverlayStyle};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 
 #[cfg(not(target_os = "macos"))]
@@ -78,6 +79,9 @@ fn overlay_dimensions(state: &str) -> (f64, f64) {
         _ => (OVERLAY_WIDTH, OVERLAY_HEIGHT),
     }
 }
+
+static LAST_MIC_LEVEL_EMIT: AtomicU64 = AtomicU64::new(0);
+const EMIT_THROTTLE_MS: u64 = 33; // ~30 FPS
 
 // Gaps from the monitor *work area* edges (which already exclude the menu
 // bar, Dock, and taskbar — see calculate_overlay_position), so these are just
@@ -646,6 +650,20 @@ pub fn emit_levels(app_handle: &AppHandle, levels: &[f32]) {
     if !OVERLAY_ENABLED.load(Ordering::Relaxed) {
         return;
     }
+
+    // Throttle to ~30 FPS. Even with the overlay enabled, the raw audio
+    // callback fires far faster than the UI needs; capping emission rate
+    // cuts the per-frame `eval_script`/IPC volume that drives the wry
+    // memory growth in issue #1279 (upstream tauri-apps/wry#1489).
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    let last = LAST_MIC_LEVEL_EMIT.load(Ordering::Relaxed);
+    if now.saturating_sub(last) < EMIT_THROTTLE_MS {
+        return;
+    }
+    LAST_MIC_LEVEL_EMIT.store(now, Ordering::Relaxed);
 
     // Target only the overlay window. In Tauri 2 both `AppHandle::emit`
     // and `WebviewWindow::emit` broadcast to all webviews; Tauri's
