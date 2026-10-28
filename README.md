@@ -115,9 +115,8 @@ Locution is early and under active development.
 
 - **macOS** (Apple Silicon and Intel) — primary, validated
 - **Windows** (x64 and ARM64) — available
-- **Linux** (x64 and ARM64) — experimental
 
-Each release builds Linux packages (`.deb`, `.rpm`, and `.AppImage`) inherited from Handy's Linux support, but they are not yet tested for Locution. Treat them as experimental.
+Linux is not supported. The Linux code inherited from Handy is still in the tree, but releases no longer ship Linux packages and CI does not build for Linux.
 
 ## System requirements
 
