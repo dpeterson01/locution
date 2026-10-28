@@ -57,6 +57,18 @@ jobs:
           version: 1.4.309.0
           cache: true
 
+      # ggml-vulkan needs a findable SPIRV-HeadersConfig.cmake, which the SDK
+      # install does not expose. Same vcpkg workaround as build.yml.
+      - name: Install SPIRV-Headers (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          vcpkg install spirv-headers:x64-windows
+          if ($LASTEXITCODE -ne 0) { throw "vcpkg install spirv-headers failed" }
+          $prefix = "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows" -replace '\\','/'
+          $combined = if ($env:CMAKE_PREFIX_PATH) { "$prefix;$env:CMAKE_PREFIX_PATH" } else { $prefix }
+          Add-Content $env:GITHUB_ENV "CMAKE_PREFIX_PATH=$combined"
+
       # transcribe-cpp-sys cmake builds create paths that exceed Windows MAX_PATH
       # (260 chars). Shorten the target dir to keep paths under the limit.
       - name: Shorten build path (Windows)
