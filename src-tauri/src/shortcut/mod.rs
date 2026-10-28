@@ -88,7 +88,6 @@ fn reconcile_cancel_shortcut(app: &AppHandle) {
     #[cfg(target_os = "linux")]
     {
         let _ = app;
-        return;
     }
 
     #[cfg(not(target_os = "linux"))]
