@@ -22,7 +22,6 @@ Locution is a fully-local macOS dictation app: global hotkey → mic capture →
 
 - **Frontend changes:** run `bun run check:frontend`. Add the relevant Playwright test while iterating on behavior.
 - **Rust changes:** run `bun run check:rust` and the narrowest relevant Rust test. Strict Clippy treats warnings as errors.
-- **Nix or packaging changes:** run `bun run check:nix`. It verifies `.nix/bun.nix` synchronization and evaluates the Linux package derivation.
 - **PR readiness:** run `bun run check:pr`. It includes fast frontend and Rust checks, Rust tests, and Playwright.
 - **Native acceptance:** run `bun run check:acceptance` only when startup, packaging, migrations, bundled resources, or Tauri configuration changed. It adds the packaged native smoke test to the PR tier.
 
