@@ -25,9 +25,7 @@
     "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings",
     "check:fast": "bun run check:frontend && bun run check:rust",
     "check:pr": "bun run check:fast && bun run test:rust && bun run test:playwright",
-    "check:acceptance": "bun run check:pr && bun run test:native",
-    "check:nix": "bunx bun2nix -o .nix/bun.nix && git diff --exit-code -- .nix/bun.nix && nix eval .#packages.x86_64-linux.handy.drvPath",
-    "postinstall": "bun scripts/check-nix-deps.ts"
+    "check:acceptance": "bun run check:pr && bun run test:native"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.16",
