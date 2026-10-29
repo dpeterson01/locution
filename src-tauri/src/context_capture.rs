@@ -613,7 +613,7 @@ mod windows_impl {
         let full_path = String::from_utf16_lossy(&buf[..size as usize]);
         // Basename after the last path separator; the exe name is the map key.
         let base = full_path
-            .rsplit(|c| c == '\\' || c == '/')
+            .rsplit(['\\', '/'])
             .next()
             .unwrap_or(&full_path)
             .trim();
